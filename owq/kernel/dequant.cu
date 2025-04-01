@@ -437,7 +437,7 @@ void matquant3dequant_cuda(
   dim3 threads(MMBLOCKWIDTH);
 
   AT_DISPATCH_FLOATING_TYPES(
-    scales.type(), "matquant3dequant_cuda", ([&] {
+    scales.scalar_type(), "matquant3dequant_cuda", ([&] {
       MatQuant3DequantKernel<<<blocks, threads>>>(
         mat.data<int>(), out.data<float>(),
         scales.data<float>(), zeros.data<uint8_t>(),
@@ -545,7 +545,7 @@ void matquant4dequant_cuda(
   dim3 threads(MMBLOCKWIDTH);
 
   AT_DISPATCH_FLOATING_TYPES(
-    scales.type(), "matquant4dequant_cuda", ([&] {
+    scales.scalar_type(), "matquant4dequant_cuda", ([&] {
       MatQuant4DequantKernel<<<blocks, threads>>>(
         mat.data<int>(), out.data<float>(),
         scales.data<float>(), zeros.data<uint8_t>(),
