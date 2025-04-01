@@ -132,7 +132,7 @@ def layerwise_quantize(model, dataloader, dev, args):
                     frob_norm_error = (W - W_quant).pow(2).sum(dim=0)
                 else:
                     frob_norm_error = None
-                out_ids = gptq_owq[name].hessian_sorting(actorder=args.act_order, frob_norm=frob_norm_error)
+                out_ids = gptq_owq[name].hessian_sorting(actorder=args.act_order, frob_norm=frob_norm_error, custom=args.custom_columns)
                 gptq_owq[name].quantizer.out_ids = out_ids
                     
             if not args.no_frob_norm:
@@ -428,6 +428,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--load', type=str, default='',
         help='Load fake or 3bit quantized checkpoint.'
+    )
+    parser.add_argument(
+        '--custom_columns', type=str, default='',
+        help='Load custom columns'
     )
     parser.add_argument(
         '--logfile', type=str, default='',

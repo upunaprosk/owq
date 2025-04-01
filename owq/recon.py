@@ -57,31 +57,62 @@ class GPTQ_OWQ:
         self.H += inp.matmul(inp.t())
         
         
-    def hessian_sorting(self, actorder=False, frob_norm=None):
-        H = self.H
+    def hessian_sorting(self, actorder=False, frob_norm=None, custom=None):
+        if not custom:
+            H = self.H
 
-        if not self.owq:
+            if not self.owq:
+                if actorder:
+                    self.ids = torch.argsort(torch.diag(H), descending=True)
+                return torch.tensor([])
+
+            temp_mask = torch.full([self.columns], True, device=self.dev)
+
+            H_diag = torch.diag(H)
+            if frob_norm is not None:
+                H_diag *= frob_norm
+            descending_ids = torch.argsort(H_diag, descending=True)
+
+            temp_mask[descending_ids[:self.n_out]] = False
             if actorder:
-                self.ids = torch.argsort(torch.diag(H), descending=True)
-            return torch.tensor([])
-        
-        temp_mask = torch.full([self.columns], True, device=self.dev)
-        
-        H_diag = torch.diag(H)
-        if frob_norm is not None:
-            H_diag *= frob_norm
-        descending_ids = torch.argsort(H_diag, descending=True)
-        
-        temp_mask[descending_ids[:self.n_out]] = False
-        if actorder:
-            ids = torch.cat([descending_ids[self.n_out:],descending_ids[:self.n_out]])
-        else:
-            ids = torch.cat([torch.arange(self.columns, device=self.dev)[temp_mask], descending_ids[:self.n_out]])
-        
-        self.ids = ids
-        return torch.sort(descending_ids[:self.n_out])[0].to(torch.int32)
+                ids = torch.cat([descending_ids[self.n_out:],descending_ids[:self.n_out]])
+            else:
+                ids = torch.cat([torch.arange(self.columns, device=self.dev)[temp_mask], descending_ids[:self.n_out]])
 
-    
+            self.ids = ids
+            return torch.sort(descending_ids[:self.n_out])[0].to(torch.int32)
+        else:
+            idx_list = []
+            with open(custom, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    idx_str, sens_str = line.split()
+                    idx_list.append(int(idx_str))
+
+            descending_ids = torch.tensor(idx_list, device=self.dev)
+
+            if not self.owq:
+                if actorder:
+                    self.ids = descending_ids
+                return torch.tensor([])
+
+            temp_mask = torch.full([self.columns], True, device=self.dev)
+            temp_mask[descending_ids[:self.n_out]] = False
+            if actorder:
+                ids = torch.cat([
+                    descending_ids[self.n_out:],
+                    descending_ids[:self.n_out]
+                ])
+            else:
+                ids = torch.cat([
+                    torch.arange(self.columns, device=self.dev)[temp_mask],
+                    descending_ids[:self.n_out]
+                ])
+
+            self.ids = ids
+            return torch.sort(descending_ids[:self.n_out])[0].to(torch.int32)
+
+
     def fasterquant(
         self, blocksize=128, percdamp=.01, groupsize=-1, actorder=False
     ):
