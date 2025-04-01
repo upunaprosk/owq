@@ -49,6 +49,32 @@
         "position_ids"
         ]
     },
+"mistral":{
+    "map_layer":{"q":"self_attn.q_proj","k":"self_attn.k_proj","v":"self_attn.v_proj","o":"self_attn.o_proj","up":"mlp.up_proj","gate":"mlp.gate_proj","down":"mlp.down_proj"},
+    "ratios":{"self_attn.q_proj":1,"self_attn.k_proj":1,"self_attn.v_proj":1,"self_attn.o_proj":1,"mlp.up_proj":0.375,"mlp.gate_proj":0.375,"mlp.down_proj":0.375},
+    "sequential":[
+        ["self_attn.q_proj", "self_attn.k_proj", "self_attn.v_proj"],
+        ["self_attn.o_proj"],
+        ["mlp.up_proj", "mlp.gate_proj"],
+        ["mlp.down_proj"]
+        ],
+    "ln_layers":[
+        "input_layernorm",
+        "post_attention_layernorm"
+        ],
+    "layers":"model.model.layers",
+    "prefix":"model.layers",
+    "pre_layers":[
+        "model.model.embed_tokens"
+        ],
+    "post_layers":[
+        "model.model.norm"
+        ],
+    "inp_kwargs":[
+        "attention_mask",
+        "position_ids"
+        ]
+    },
 "bloom":{
     "map_layer":{"qkv":"self_attention.query_key_value","dense":"self_attention.dense","fc1":"mlp.dense_h_to_4h","fc2":"mlp.dense_4h_to_h"}, 
     "ratios":{"self_attention.query_key_value":1,"self_attention.dense":1,"mlp.dense_h_to_4h":0.25,"mlp.dense_4h_to_h":0.25},

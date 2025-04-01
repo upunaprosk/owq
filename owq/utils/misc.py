@@ -109,6 +109,8 @@ def processing_arguments(args):
             meta['post_layers'].append('model.model.decoder.final_layer_norm')
     elif 'llama' in args.model or 'vicuna' in args.model:
         meta = metas['llama']
+    elif 'mistral' in args.model or 'mistral' in args.model.lower():
+        meta = metas['mistral']
     elif 'bloom' in args.model:
         meta = metas['bloom']
     elif 'falcon' in args.model:
