@@ -257,6 +257,8 @@ def eval_ppl(model, testenc, dev, args):
                 subset[name].weight.data = quantizer.quantize(W).to(next(iter(layer.parameters())).dtype)
 
         use_rope = 'llama' in args.model.lower()
+        if not use_rope:
+          use_rope = 'mistral' in args.model.lower()
         if use_rope:
             rotary_emb = model.model.rotary_emb
             seqlen = inps.shape[1]
