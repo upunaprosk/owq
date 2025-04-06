@@ -105,6 +105,7 @@ __device__ inline T hdiv(T a, T b){
   return __hdiv(a, b);
 }
 
+/*
 template<typename T>
 __device__ inline T hfma(T a, T b, T c){
   return __hfma(a, b, c);
@@ -113,4 +114,47 @@ __device__ inline T hfma(T a, T b, T c){
 template<typename T>
 __device__ inline T hfma2(T a, T b, T c){
   return __hfma2(a, b, c);
+}
+*/
+__device__ inline half hfma(half a, half b, half c){
+  return __hfma(a, b, c);
+}
+
+__device__ inline nv_bfloat16 hfma(nv_bfloat16 a, nv_bfloat16 b, nv_bfloat16 c) {
+#if __CUDA_ARCH__ >= 800
+    return __hfma(a, b, c);  // Use hardware instruction on Ampere+
+#else
+    // Emulate FMA using float conversions for pre-Ampere GPUs
+    float af = __bfloat162float(a);
+    float bf = __bfloat162float(b);
+    float cf = __bfloat162float(c);
+
+    nv_bfloat16 result = __float2bfloat16_rn(af * bf + cf);
+    return result;
+#endif
+}
+
+__device__ inline half2 hfma2(half2 a, half2 b, half2 c){
+  return __hfma2(a, b, c);
+}
+
+__device__ inline nv_bfloat162 hfma2(nv_bfloat162 a, nv_bfloat162 b, nv_bfloat162 c) {
+#if __CUDA_ARCH__ >= 800
+    return __hfma2(a, b, c);  // Use hardware instruction on Ampere+
+#else
+    // Emulate FMA using float conversions for pre-Ampere GPUs
+    float a_low = __bfloat162float(a.x);
+    float b_low = __bfloat162float(b.x);
+    float c_low = __bfloat162float(c.x);
+
+    float a_high = __bfloat162float(a.y);
+    float b_high = __bfloat162float(b.y);
+    float c_high = __bfloat162float(c.y);
+
+    nv_bfloat162 result;
+    result.x = __float2bfloat16_rn(a_low * b_low + c_low);
+    result.y = __float2bfloat16_rn(a_high * b_high + c_high);
+
+    return result;
+#endif
 }
