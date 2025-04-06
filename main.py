@@ -253,8 +253,22 @@ def eval_ppl(model, testenc, dev, args):
                 quantizer.find_params(W, weight=True)
                 subset[name].weight.data = quantizer.quantize(W).to(next(iter(layer.parameters())).dtype)
 
+        use_rope = 'llama' in args.model.lower()
+        if use_rope:
+            rotary_emb = model.model.rotary_emb
+            seqlen = inps.shape[1]
+            position_ids = torch.arange(seqlen, dtype=torch.long, device=inps.device).unsqueeze(0)
+
         for j in range(nsamples):
-            outs[j] = layer(inps[j].unsqueeze(0), **inp_kwargs)[0]
+            input_tensor = inps[j].unsqueeze(0)
+
+            if use_rope:
+                cos, sin = rotary_emb(input_tensor, position_ids[:, :input_tensor.shape[1]])
+                out = layer(input_tensor, position_embeddings=(cos, sin), **inp_kwargs)
+            else:
+                out = layer(input_tensor, **inp_kwargs)
+
+            outs[j] = out[0]
 
         layers[i] = layer.cpu()
         del layer
