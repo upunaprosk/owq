@@ -238,7 +238,7 @@ class HuggingFaceAutoLM(BaseLM):
 
         # added for owq
         if load:
-            ckpt = torch.load(load)
+            ckpt = torch.load(load,weights_only=False)
             dtype = ckpt['dtype']
             wbits = ckpt['bits']
         def skip(*args, **kwargs):
