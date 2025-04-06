@@ -98,6 +98,9 @@ def layerwise_quantize(model, dataloader, dev, args):
         sequential = meta['sequential'] if args.true_sequential else [list(block_layers.keys())]
 
         use_rope = 'llama' in args.model.lower()
+        if not use_rope:
+            use_rope = 'mistral' in args.model.lower()
+
         if use_rope:
             rotary_emb = model.model.rotary_emb
             seqlen = inps.shape[1]
