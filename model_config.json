@@ -45,8 +45,7 @@
         "model.model.norm"
         ],
     "inp_kwargs":[
-        "attention_mask",
-        "position_ids"
+        "attention_mask"
         ]
     },
 "mistral":{
