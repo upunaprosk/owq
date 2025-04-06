@@ -13,6 +13,7 @@ from owq.utils.misc import *
 from owq.utils.datautils import *
 from owq.utils.modelutils import *
 
+
 @torch.no_grad()
 def layerwise_quantize(model, dataloader, dev, args):
     meta = args.meta
@@ -21,10 +22,10 @@ def layerwise_quantize(model, dataloader, dev, args):
     use_cache = model.config.use_cache
     layers, pre_layers, _ = parsing_layers(model, meta)
     model.config.use_cache = False
-    
+
     for pre_layer in pre_layers:
         pre_layer = pre_layer.to(dev)
-    
+
     layers[0] = layers[0].to(dev)
 
     dtype = next(iter(model.parameters())).dtype
@@ -32,13 +33,14 @@ def layerwise_quantize(model, dataloader, dev, args):
         (args.nsamples, args.seqlen, model.config.hidden_size), dtype=dtype, device=dev
     )
 
-    cache = {kw:None for kw in meta['inp_kwargs']}
+    cache = {kw: None for kw in meta['inp_kwargs']}
     cache['i'] = 0
 
     class Catcher(nn.Module):
         def __init__(self, module):
             super().__init__()
             self.module = module
+
         def forward(self, inp, **kwargs):
             inps[cache['i']] = inp
             for key in cache:
@@ -47,16 +49,16 @@ def layerwise_quantize(model, dataloader, dev, args):
                 else:
                     cache[key] = kwargs[key]
             raise ValueError
-    
+
     layers[0] = Catcher(layers[0])
     for batch in dataloader:
         try:
             model(batch[0].to(dev))
         except ValueError:
             pass
-    
+
     layers[0] = layers[0].module.cpu()
-    
+
     for pre_layer in pre_layers:
         pre_layer = pre_layer.cpu()
     torch.cuda.empty_cache()
@@ -69,16 +71,16 @@ def layerwise_quantize(model, dataloader, dev, args):
 
     owq_layers = args.meta['owq_layers']
     ratios = args.meta['ratios']
-    n_out_dict = {l:0 for l in owq_layers.keys()}
+    n_out_dict = {l: 0 for l in owq_layers.keys()}
     if args.target_bit is not None:
         n_owq_layers = sum(owq_layers.values())
-        
+
         r = (12 / (16 - args.wbits)) * (args.target_bit - args.wbits)
         # r = (args.target_bit - args.wbits) * 16 / 12
         r /= n_owq_layers
 
         layer = find_layers(layers[0])
-        
+
         for l in owq_layers:
             # for even number of n_out
             n_out = round(layer[l].weight.data.shape[1] * r * ratios[l])
@@ -87,17 +89,20 @@ def layerwise_quantize(model, dataloader, dev, args):
     elif args.target_rank is not None:
         for l in owq_layers:
             n_out_dict[l] = args.target_rank
-    
+
     quantizers = {}
     for i in range(len(layers)):
         layer = layers[i].to(dev)
         block_layers = find_layers(layer)
 
-        if args.true_sequential:
-            sequential = meta['sequential']
-        else:
-            sequential = [list(block_layers.keys())]
-       
+        sequential = meta['sequential'] if args.true_sequential else [list(block_layers.keys())]
+
+        use_rope = 'llama' in args.model.lower()
+        if use_rope:
+            rotary_emb = model.model.rotary_emb
+            seqlen = inps.shape[1]
+            position_ids = torch.arange(seqlen, dtype=torch.long, device=inps.device).unsqueeze(0)
+
         for names in sequential:
             subset = {n: block_layers[n] for n in names}
 
@@ -108,19 +113,26 @@ def layerwise_quantize(model, dataloader, dev, args):
                     args.wbits, perchannel=True, sym=args.sym, mse=(args.tuning == 'mse')
                 )
                 gptq_owq[name].quantizer.n_out = n_out_dict[name]
-                
+
             def add_batch(name):
                 def tmp(_, inp, out):
                     gptq_owq[name].add_batch(inp[0].data, out.data)
+
                 return tmp
-            handles = []
-            for name in subset:
-                handles.append(subset[name].register_forward_hook(add_batch(name)))
+
+            handles = [subset[name].register_forward_hook(add_batch(name)) for name in subset]
+
             for j in range(args.nsamples):
-                layer(inps[j].unsqueeze(0), **inp_kwargs)
+                input_tensor = inps[j].unsqueeze(0)
+                if use_rope:
+                    cos, sin = rotary_emb(input_tensor, position_ids[:, :input_tensor.shape[1]])
+                    layer(input_tensor, position_embeddings=(cos, sin), **inp_kwargs)
+                else:
+                    layer(input_tensor, **inp_kwargs)
+
             for h in handles:
                 h.remove()
-            
+
             for name in subset:
                 if not args.no_frob_norm:
                     W = subset[name].weight.data.clone().to(torch.float)
@@ -132,37 +144,45 @@ def layerwise_quantize(model, dataloader, dev, args):
                     frob_norm_error = (W - W_quant).pow(2).sum(dim=0)
                 else:
                     frob_norm_error = None
-                out_ids = gptq_owq[name].hessian_sorting(actorder=args.act_order, frob_norm=frob_norm_error, custom=args.custom_columns)
+
+                out_ids = gptq_owq[name].hessian_sorting(
+                    actorder=args.act_order, frob_norm=frob_norm_error, custom=args.custom_columns
+                )
                 gptq_owq[name].quantizer.out_ids = out_ids
-                    
+
             if not args.no_frob_norm:
-                del W
-                del W_quant
-                del temp_quantizer
+                del W, W_quant, temp_quantizer
                 torch.cuda.empty_cache()
-            
+
             for name in subset:
                 print(f"Quantizing {meta['prefix']}.{i}.{name}")
-                gptq_owq[name].fasterquant(percdamp=args.percdamp, groupsize=args.groupsize, actorder=args.act_order)
+                gptq_owq[name].fasterquant(
+                    percdamp=args.percdamp, groupsize=args.groupsize, actorder=args.act_order
+                )
                 quantizers[f"{meta['prefix']}.{i}.{name}"] = gptq_owq[name].quantizer
                 gptq_owq[name].free()
 
         for name in list(block_layers.keys()):
             quantizers[f"{meta['prefix']}.{i}.{name}"] = quantizers[f"{meta['prefix']}.{i}.{name}"].cpu()
-            
+
         for j in range(args.nsamples):
-            outs[j] = layer(inps[j].unsqueeze(0), **inp_kwargs)[0]
+            input_tensor = inps[j].unsqueeze(0)
+            if use_rope:
+                cos, sin = rotary_emb(input_tensor, position_ids[:, :input_tensor.shape[1]])
+                out = layer(input_tensor, position_embeddings=(cos, sin), **inp_kwargs)
+            else:
+                out = layer(input_tensor, **inp_kwargs)
+            outs[j] = out[0]
 
         layers[i] = layer.cpu()
         del layer
-        del gptq_owq 
+        del gptq_owq
         torch.cuda.empty_cache()
-
         inps, outs = outs, inps
 
     model.config.use_cache = use_cache
-    
     return quantizers
+
 
 @torch.no_grad()
 def eval_ppl(model, testenc, dev, args):
@@ -178,7 +198,7 @@ def eval_ppl(model, testenc, dev, args):
 
     for pre_layer in pre_layers:
         pre_layer = pre_layer.to(dev)
-    
+
     layers[0] = layers[0].to(dev)
 
     dtype = next(iter(model.parameters())).dtype
@@ -186,13 +206,14 @@ def eval_ppl(model, testenc, dev, args):
         (nsamples, args.seqlen, model.config.hidden_size), dtype=dtype, device=dev
     )
 
-    cache = {kw:None for kw in meta['inp_kwargs']}
+    cache = {kw: None for kw in meta['inp_kwargs']}
     cache['i'] = 0
 
     class Catcher(nn.Module):
         def __init__(self, module):
             super().__init__()
             self.module = module
+
         def forward(self, inp, **kwargs):
             inps[cache['i']] = inp
             for key in cache:
@@ -212,7 +233,7 @@ def eval_ppl(model, testenc, dev, args):
     layers[0] = layers[0].module
 
     layers[0] = layers[0].cpu()
-    
+
     for pre_layer in pre_layers:
         pre_layer = pre_layer.cpu()
     torch.cuda.empty_cache()
@@ -223,7 +244,7 @@ def eval_ppl(model, testenc, dev, args):
 
     for i in tqdm(range(len(layers))):
         layer = layers[i].to(dev)
-        
+
         if args.nearest:
             subset = find_layers(layer)
             for name in subset:
@@ -242,7 +263,7 @@ def eval_ppl(model, testenc, dev, args):
 
     for post_layer in post_layers:
         post_layer = post_layer.to(dev)
-    
+
     model.lm_head = model.lm_head.to(dev)
 
     testenc = testenc.to(dev)
@@ -254,8 +275,8 @@ def eval_ppl(model, testenc, dev, args):
         lm_logits = model.lm_head(hidden_states)
         shift_logits = lm_logits[:, :-1, :].contiguous()
         shift_labels = testenc[
-            :, (i * args.seqlen):((i + 1) * args.seqlen)
-        ][:, 1:]
+                       :, (i * args.seqlen):((i + 1) * args.seqlen)
+                       ][:, 1:]
         loss_fct = nn.CrossEntropyLoss()
         loss = loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
         neg_log_likelihood = loss.float() * args.seqlen
@@ -266,17 +287,18 @@ def eval_ppl(model, testenc, dev, args):
     model.config.use_cache = use_cache
     return ppl.item()
 
+
 def model_multigpu(model, gpus, args):
     import math
 
     layers, pre_layers, post_layers = parsing_layers(model=model, meta=args.meta)
-    
+
     for pre_layer in pre_layers:
         pre_layer = pre_layer.to(gpus[0])
-    
+
     for post_layer in post_layers:
         post_layer = post_layer.to(gpus[0])
-    
+
     model.lm_head = model.lm_head.to(gpus[0])
 
     class MoveModule(nn.Module):
@@ -284,6 +306,7 @@ def model_multigpu(model, gpus, args):
             super().__init__()
             self.module = module
             self.dev = next(iter(self.module.parameters())).device
+
         def forward(self, *inp, **kwargs):
             inp = list(inp)
             if inp[0].device != self.dev:
@@ -300,23 +323,25 @@ def model_multigpu(model, gpus, args):
     layers[-1] = MoveModule(layers[-1].to(gpus[0]))
 
     model.gpus = gpus
-    
+
 
 def benchmark(model, input_ids, args):
     meta = args.meta
     layers, _, _ = parsing_layers(model, meta)
-    
+
     dev = model.gpus[0] if hasattr(model, 'gpus') else model.device
     input_ids = input_ids.to(dev)
     torch.cuda.synchronize()
 
     cache = {'past': None}
-    def clear_past(i): # for memory collect
+
+    def clear_past(i):  # for memory collect
         def tmp(layer, inp, out):
             if cache['past']:
                 cache['past'][i] = None
+
         return tmp
-    
+
     for i, layer in enumerate(layers):
         layer.register_forward_hook(clear_past(i))
 
@@ -325,18 +350,19 @@ def benchmark(model, input_ids, args):
     loss = nn.CrossEntropyLoss()
     tot = 0.
     torch.cuda.empty_cache()
+
     def sync():
         if hasattr(model, 'gpus'):
             for gpu in model.gpus:
                 torch.cuda.synchronize(gpu)
         else:
             torch.cuda.synchronize()
-            
+
     with torch.no_grad():
         times = []
         for i in range(input_ids.numel()):
             tick = time.perf_counter()
-            out = model(input_ids[:, i].reshape(1,-1),
+            out = model(input_ids[:, i].reshape(1, -1),
                         past_key_values=cache['past'])
             sync()
             t = time.perf_counter() - tick
@@ -347,13 +373,14 @@ def benchmark(model, input_ids, args):
             cache['past'] = list(out.past_key_values)
             del out
         sync()
-        
+
         print(f'Median(second): {np.median(times)}')
         print(f'Min(second): {np.min(times)}')
         print(f'PPL:', torch.exp(tot / (input_ids.numel() - 1)).item())
-    
+
+
 if __name__ == '__main__':
-    
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -411,7 +438,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--nearest', action='store_true',
         help='Whether to run the round-to-nearest quantization.'
-    ) 
+    )
     parser.add_argument(
         '--groupsize', type=int, default=-1,
         help='Groupsize for fine-grained quantization; default uses full row.'
@@ -453,7 +480,7 @@ if __name__ == '__main__':
         '--benchmark', type=int, default=0,
         help='Number of tokens to use for benchmarking.'
     )
-    
+
     parser.add_argument(
         '--act-order', action='store_true',
         help='Whether to apply the activation order GPTQ heuristic'
@@ -465,36 +492,36 @@ if __name__ == '__main__':
     parser.add_argument(
         '--trust_remote_code', action='store_true',
     )
-    
+
     args = parser.parse_args()
     meta = processing_arguments(args)
     args.meta = meta
     device = torch.device('cuda:0')
-    
+
     seed_all(args.seed)
-    
+
     t = 0
     if args.load:
         model = load_model(args.model, args.load, args.faster)
     else:
         model = get_hfmodel(args.model, args.dtype)
-    
+
     if getattr(model.config, 'max_position_embeddings', None):
         args.seqlen = model.config.max_position_embeddings
     elif getattr(model.config, 'max_sequence_length', None):
         args.seqlen = model.config.max_sequence_length
     else:
         args.seqlen = 2048
-    
+
     if not args.load and args.wbits < 16 and not args.nearest:
         dataloader = get_loaders(
             args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=args.seqlen, train=True
         )
         tick = time.time()
         quantizers = layerwise_quantize(model, dataloader, device, args)
-        t = round((time.time() - tick),1)
+        t = round((time.time() - tick), 1)
         print(f"Running Time : {t}")
-    
+
     # benchmark
     if args.benchmark:
         dataloader = get_loaders(
@@ -505,9 +532,9 @@ if __name__ == '__main__':
             model_multigpu(model, gpus, args)
         else:
             model = model.to(device)
-        
-        if isinstance(dataloader,list):
-            input_ids = dataloader[0][0][:,:args.benchmark]
+
+        if isinstance(dataloader, list):
+            input_ids = dataloader[0][0][:, :args.benchmark]
         else:
             input_ids = dataloader.input_ids[:, :args.benchmark]
         benchmark(model, input_ids, args)
@@ -517,16 +544,16 @@ if __name__ == '__main__':
     t1 = time.time()
     ppl_scores = []
     if not args.no_eval:
-        ppl_tasks = ['wikitext2','ptb', 'c4']
+        ppl_tasks = ['wikitext2', 'ptb', 'c4']
         for dataset in ppl_tasks:
             testloader = get_loaders(
                 dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False
             )
             print(dataset)
             ppl_score = eval_ppl(model, testloader, device, args)
-            ppl_scores.append((dataset,ppl_score))
+            ppl_scores.append((dataset, ppl_score))
     t2 = time.time() - t1
-    
+
     # save
     if args.save:
         save_model(model, quantizers, args.save, args.packing, args.fake)
