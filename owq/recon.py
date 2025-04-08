@@ -10,36 +10,37 @@ from .quant import *
 torch.backends.cuda.matmul.allow_tf32 = False
 torch.backends.cudnn.allow_tf32 = False
 
+
 class GPTQ_OWQ:
     def __init__(self, layer, n_out):
         self.layer = layer
         self.dev = self.layer.weight.device
         W = layer.weight.data.clone()
 
-        if isinstance(self.layer, nn.Conv2d): 
+        if isinstance(self.layer, nn.Conv2d):
             W = W.flatten(1)
         if isinstance(self.layer, transformers.Conv1D):
             W = W.t()
-        
+
         self.rows = W.shape[0]
-        self.columns = W.shape[1] 
-        self.H = torch.zeros((self.columns, self.columns), device=self.dev) 
-        self.nsamples = 0 
+        self.columns = W.shape[1]
+        self.H = torch.zeros((self.columns, self.columns), device=self.dev)
+        self.nsamples = 0
 
         self.n_out = n_out
         self.n_nonout = W.shape[1] - n_out
         self.owq = n_out > 0
         self.out_quantizer = None
         self.ids = None
-    
+
     def add_batch(self, inp, out):
         if len(inp.shape) == 2:
             inp = inp.unsqueeze(0)
-        tmp = inp.shape[0] 
+        tmp = inp.shape[0]
         if isinstance(self.layer, nn.Linear) or isinstance(self.layer, transformers.Conv1D):
             if len(inp.shape) == 3:
                 inp = inp.reshape((-1, inp.shape[-1]))
-            inp = inp.t() 
+            inp = inp.t()
         if isinstance(self.layer, nn.Conv2d):
             unfold = nn.Unfold(
                 self.layer.kernel_size,
@@ -50,13 +51,12 @@ class GPTQ_OWQ:
             inp = unfold(inp)
             inp = inp.permute([1, 0, 2])
             inp = inp.flatten(1)
-        
+
         self.H *= self.nsamples / (self.nsamples + tmp)
         self.nsamples += tmp
         inp = math.sqrt(2 / self.nsamples) * inp.float()
         self.H += inp.matmul(inp.t())
-        
-        
+
     def hessian_sorting(self, actorder=False, frob_norm=None, custom=None):
         if not custom:
             H = self.H
@@ -75,7 +75,7 @@ class GPTQ_OWQ:
 
             temp_mask[descending_ids[:self.n_out]] = False
             if actorder:
-                ids = torch.cat([descending_ids[self.n_out:],descending_ids[:self.n_out]])
+                ids = torch.cat([descending_ids[self.n_out:], descending_ids[:self.n_out]])
             else:
                 ids = torch.cat([torch.arange(self.columns, device=self.dev)[temp_mask], descending_ids[:self.n_out]])
 
@@ -86,9 +86,9 @@ class GPTQ_OWQ:
             with open(custom, 'r') as f:
                 for line in f:
                     line = line.strip()
-                    idx_str, sens_str = line.split()
+                    _, idx_str, sens_str = line.split()
                     idx_list.append(int(idx_str))
-
+            idx_str = idx_str[::-1]
             descending_ids = torch.tensor(idx_list, device=self.dev)
 
             if not self.owq:
@@ -112,9 +112,8 @@ class GPTQ_OWQ:
             self.ids = ids
             return torch.sort(descending_ids[:self.n_out])[0].to(torch.int32)
 
-
     def fasterquant(
-        self, blocksize=128, percdamp=.01, groupsize=-1, actorder=False
+            self, blocksize=128, percdamp=.01, groupsize=-1, actorder=False
     ):
         W = self.layer.weight.data.clone()
         if isinstance(self.layer, nn.Conv2d):
@@ -122,33 +121,33 @@ class GPTQ_OWQ:
         if isinstance(self.layer, transformers.Conv1D):
             W = W.t()
         W = W.float()
-        
+
         tick = time.time()
-        
+
         if actorder or self.owq:
             W = W[:, self.ids]
-            self.H = self.H[self.ids][:,self.ids]
-        
-        self.quantizer.find_params(W[:,:self.n_nonout], weight=True)
+            self.H = self.H[self.ids][:, self.ids]
+
+        self.quantizer.find_params(W[:, :self.n_nonout], weight=True)
 
         H = self.H
         del self.H
         dead = torch.diag(H) == 0
         H[dead, dead] = 1
-        W[:, dead] = 0 
+        W[:, dead] = 0
 
         Losses = torch.zeros_like(W)
         Q = torch.zeros_like(W)
-        
+
         damp = percdamp * torch.mean(torch.diag(H))
         diag = torch.arange(self.columns, device=self.dev)
-        H[diag, diag] += damp 
-        
+        H[diag, diag] += damp
+
         H = torch.linalg.cholesky(H)
         H = torch.cholesky_inverse(H)
         H = torch.linalg.cholesky(H, upper=True)
         Hinv = H
-        
+
         for i1 in range(0, self.n_nonout, blocksize):
             i2 = min(i1 + blocksize, self.n_nonout)
             count = i2 - i1
@@ -165,13 +164,14 @@ class GPTQ_OWQ:
 
                 if groupsize != -1:
                     if (i1 + i) % groupsize == 0:
-                        self.quantizer.find_params(W[:, (i1 + i):min((i1 + i + groupsize),(self.columns-self.n_out))], weight=True, num=40)
+                        self.quantizer.find_params(
+                            W[:, (i1 + i):min((i1 + i + groupsize), (self.columns - self.n_out))], weight=True, num=40)
 
                 q = self.quantizer.quantize(w.unsqueeze(1)).flatten()
                 Q1[:, i] = q
                 Losses1[:, i] = (w - q) ** 2 / d ** 2
 
-                err1 = (w - q) / d       
+                err1 = (w - q) / d
                 W1[:, i:] -= err1.unsqueeze(1).matmul(Hinv1[i, i:].unsqueeze(0))
                 Err1[:, i] = err1
 
@@ -183,17 +183,16 @@ class GPTQ_OWQ:
         torch.cuda.synchronize()
         print('time %.2f' % (time.time() - tick))
         print('error', torch.sum(Losses).item())
-               
+
         if actorder or self.owq:
-            Q[:,self.n_nonout:] = W[:,self.n_nonout:]
+            Q[:, self.n_nonout:] = W[:, self.n_nonout:]
             invids = torch.argsort(self.ids)
             Q = Q[:, invids]
-        
+
         if isinstance(self.layer, transformers.Conv1D):
             Q = Q.t()
-        
-        self.layer.weight.data = Q.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
 
+        self.layer.weight.data = Q.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
 
     def free(self):
         self.H = None

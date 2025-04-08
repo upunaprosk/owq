@@ -147,11 +147,16 @@ def layerwise_quantize(model, dataloader, dev, args):
                     frob_norm_error = (W - W_quant).pow(2).sum(dim=0)
                 else:
                     frob_norm_error = None
-
-                out_ids = gptq_owq[name].hessian_sorting(
-                    actorder=args.act_order, frob_norm=frob_norm_error, custom=args.custom_columns
-                )
-                gptq_owq[name].quantizer.out_ids = out_ids
+                if args.custom_columns:
+                    file_name_p=f"{meta['prefix']}.{i}.{name}.txt"
+                    out_ids = gptq_owq[name].hessian_sorting(
+                        actorder=args.act_order, frob_norm=frob_norm_error, custom=file_name_p
+                    )
+                    gptq_owq[name].quantizer.out_ids = out_ids
+                else:
+                    out_ids = gptq_owq[name].hessian_sorting(
+                        actorder=args.act_order, frob_norm=frob_norm_error)
+                    gptq_owq[name].quantizer.out_ids = out_ids
 
             if not args.no_frob_norm:
                 del W, W_quant, temp_quantizer

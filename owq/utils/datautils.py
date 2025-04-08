@@ -45,7 +45,7 @@ def get_ptb(nsamples, seed, seqlen, tokenizer, train):
             
         return trainloader
     else:
-        testdata = load_dataset("ptb_text_only", "penn_treebank", split="test")
+        testdata = load_dataset("ptb_text_only", "penn_treebank", split="test",trust_remote_code=True)
         testenc = tokenizer(" ".join(testdata["sentence"]), return_tensors="pt")
         
         return testenc
