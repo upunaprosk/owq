@@ -88,7 +88,7 @@ class GPTQ_OWQ:
                     line = line.strip()
                     _, idx_str, sens_str = line.split()
                     idx_list.append(int(idx_str))
-            idx_str = idx_str[::-1]
+            idx_list = idx_list[::-1]
             descending_ids = torch.tensor(idx_list, device=self.dev)
 
             if not self.owq:
