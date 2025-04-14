@@ -7,7 +7,7 @@ from transformers import AutoTokenizer, LlamaTokenizer
 
 def get_wikitext2(nsamples, seed, seqlen, tokenizer, train):
     if train:
-        traindata = load_dataset('wikitext', 'wikitext-2-raw-v1', split='train')
+        traindata = load_dataset('wikitext', 'wikitext-2-raw-v1', split='train', trust_remote_code=True)
         trainenc = tokenizer("\n\n".join(traindata['text']), return_tensors='pt')
         
         random.seed(seed)
@@ -23,14 +23,14 @@ def get_wikitext2(nsamples, seed, seqlen, tokenizer, train):
         return trainloader
             
     else:
-        testdata = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test')
+        testdata = load_dataset('wikitext', 'wikitext-2-raw-v1', split='test', trust_remote_code=True)
         testenc = tokenizer("\n\n".join(testdata['text']), return_tensors='pt')
         
         return testenc
 
 def get_ptb(nsamples, seed, seqlen, tokenizer, train):
     if train:
-        traindata = load_dataset('ptb_text_only', 'penn_treebank', split='train')
+        traindata = load_dataset('ptb_text_only', 'penn_treebank', split='train', trust_remote_code=True)
         trainenc = tokenizer(" ".join(traindata['sentence']), return_tensors='pt')
 
         random.seed(seed)
@@ -53,7 +53,7 @@ def get_ptb(nsamples, seed, seqlen, tokenizer, train):
 def get_c4(nsamples, seed, seqlen, tokenizer, train):
     if train:
         traindata = load_dataset(
-            'allenai/c4', data_files={'train': 'en/c4-train.00000-of-01024.json.gz'}, split='train'
+            'allenai/c4', data_files={'train': 'en/c4-train.00000-of-01024.json.gz'}, split='train', trust_remote_code=True
         )
         random.seed(seed)
         trainloader = []
@@ -73,7 +73,7 @@ def get_c4(nsamples, seed, seqlen, tokenizer, train):
         return trainloader
     else:
         valdata = load_dataset(
-            'allenai/c4', data_files={'validation': 'en/c4-validation.00000-of-00008.json.gz'}, split='validation'
+            'allenai/c4', data_files={'validation': 'en/c4-validation.00000-of-00008.json.gz'}, split='validation', trust_remote_code=True
         )
         valenc = tokenizer(' '.join(valdata[:1100]['text']), return_tensors='pt')
         valenc = valenc.input_ids[:, :(256 * seqlen)]

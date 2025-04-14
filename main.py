@@ -536,7 +536,7 @@ if __name__ == '__main__':
         args.seqlen = model.config.max_sequence_length
     else:
         args.seqlen = 2048
-    args.seqlen = min(args.seqlen, 2048)
+    # args.seqlen = min(args.seqlen, 2048)
     if not args.load and args.wbits < 16 and not args.nearest:
         dataloader = get_loaders(
             args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=args.seqlen, train=True
@@ -568,7 +568,7 @@ if __name__ == '__main__':
     t1 = time.time()
     ppl_scores = []
     if not args.no_eval:
-        ppl_tasks = ['wikitext2', 'ptb', 'c4']
+        ppl_tasks = ['wikitext2', 'ptb'] # skip 'c4' - cannot be loaded for Mistral (seqlen=30k)
         for dataset in ppl_tasks:
             testloader = get_loaders(
                 dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False

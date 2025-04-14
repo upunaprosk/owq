@@ -12,3 +12,4 @@ rouge_score
 pytablewriter
 sentencepiece
 einops # for falcon.py
+evaluate

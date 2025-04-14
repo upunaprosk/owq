@@ -100,20 +100,21 @@ def processing_arguments(args):
     args.dtype = interpret_dtype(args.dtype)
     
     # model config
-    if 'opt' in args.model:
+    model = args.model.lower()
+    if 'opt' in model:
         meta = metas['opt']
-        if '350m' in args.model:
+        if '350m' in model:
             meta['pre_layers'].append('model.model.decoder.project_in')
             meta['post_layers'].append('model.model.decoder.project_out')
         else:
             meta['post_layers'].append('model.model.decoder.final_layer_norm')
-    elif 'llama' in args.model or 'vicuna' in args.model:
+    elif 'llama' in model or 'vicuna' in model:
         meta = metas['llama']
-    elif 'mistral' in args.model or 'mistral' in args.model.lower():
+    elif 'mistral' in model or 'mistral' in model:
         meta = metas['mistral']
-    elif 'bloom' in args.model:
+    elif 'bloom' in model:
         meta = metas['bloom']
-    elif 'falcon' in args.model:
+    elif 'falcon' in model:
         meta = metas['falcon']
         args.trust_remote_code = True
         if args.percdamp < 1.0:

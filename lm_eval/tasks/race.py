@@ -60,7 +60,7 @@ class RACE(Task):
 
         r = collections.defaultdict(list)
         for item in datasets.load_dataset(
-            path=self.DATASET_PATH, name=self.DATASET_NAME
+            path=self.DATASET_PATH, name=self.DATASET_NAME, trust_remote_code=True
         )[set]:
             r[item["article"]].append(item)
 

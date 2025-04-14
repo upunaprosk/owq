@@ -47,7 +47,7 @@ class JsonPerplexity(PerplexityTask):
         raise TypeError("cannot download an arbitrary JSON dataset")
 
     def load(self, data_file):
-        self.dataset = datasets.load_dataset("json", data_files=data_file)
+        self.dataset = datasets.load_dataset("json", data_files=data_file, trust_remote_code=True)
 
     def has_validation_docs(self):
         return False
