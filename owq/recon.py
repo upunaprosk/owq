@@ -81,6 +81,30 @@ class GPTQ_OWQ:
 
             self.ids = ids
             return torch.sort(descending_ids[:self.n_out])[0].to(torch.int32)
+        elif 'random' in custom:
+            descending_ids = torch.randperm(self.columns, device=self.dev)
+
+            if not self.owq:
+                if actorder:
+                    self.ids = descending_ids
+                return torch.tensor([])
+
+            temp_mask = torch.full([self.columns], True, device=self.dev)
+            temp_mask[descending_ids[:self.n_out]] = False
+            if actorder:
+                ids = torch.cat([
+                    descending_ids[self.n_out:],
+                    descending_ids[:self.n_out]
+                ])
+            else:
+                ids = torch.cat([
+                    torch.arange(self.columns, device=self.dev)[temp_mask],
+                    descending_ids[:self.n_out]
+                ])
+
+            self.ids = ids
+            # print("Random outliers:", outliers.cpu().tolist())
+            return descending_ids[:self.n_out].to(torch.int32)
         else:
             idx_list = []
             with open(custom, 'r') as f:

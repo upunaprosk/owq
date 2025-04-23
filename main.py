@@ -148,9 +148,11 @@ def layerwise_quantize(model, dataloader, dev, args):
                 else:
                     frob_norm_error = None
                 if args.custom_columns:
-                    file_name_p=f"{meta['prefix']}.{i}.{name}.txt"
+                    path_to_columns=args.custom_columns
+                    if not 'random' in args.custom_columns.lower():
+                      path_to_columns=f"{meta['prefix']}.{i}.{name}.txt"
                     out_ids = gptq_owq[name].hessian_sorting(
-                        actorder=args.act_order, frob_norm=frob_norm_error, custom=file_name_p
+                        actorder=args.act_order, frob_norm=frob_norm_error, custom=path_to_columns
                     )
                     gptq_owq[name].quantizer.out_ids = out_ids
                 else:
@@ -536,7 +538,7 @@ if __name__ == '__main__':
         args.seqlen = model.config.max_sequence_length
     else:
         args.seqlen = 2048
-    # args.seqlen = min(args.seqlen, 2048)
+    args.seqlen = min(args.seqlen, 2048)
     if not args.load and args.wbits < 16 and not args.nearest:
         dataloader = get_loaders(
             args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=args.seqlen, train=True
