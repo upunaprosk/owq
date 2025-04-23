@@ -5,7 +5,7 @@ import os
 import time
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from lm_eval import tasks, evaluator, utils
+from lm_eval_old import tasks, evaluator, utils
 
 logging.getLogger("openai").setLevel(logging.WARNING)
 
