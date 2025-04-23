@@ -6,10 +6,10 @@ import transformers
 from tqdm import tqdm
 from transformers import BatchEncoding
 
-from lm_eval_old.api.instance import Instance
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.huggingface import HFLM
-from lm_eval_old.models.utils import (
+from lm_eval.api.instance import Instance
+from lm_eval.api.registry import register_model
+from lm_eval.models.huggingface import HFLM
+from lm_eval.models.utils import (
     Collator,
     replace_placeholders,
     stop_sequences_criteria,

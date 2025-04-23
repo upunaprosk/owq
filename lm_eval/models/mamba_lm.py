@@ -2,9 +2,9 @@ from typing import Optional, Union
 
 import torch
 
-import lm_eval_old.models.utils
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.huggingface import HFLM
+import lm_eval.models.utils
+from lm_eval.api.registry import register_model
+from lm_eval.models.huggingface import HFLM
 
 
 @register_model("mamba_ssm")
@@ -109,7 +109,7 @@ class MambaLMWrapper(HFLM):
                 device=self._device,
                 dtype=torch.float16
                 if dtype == "auto"
-                else lm_eval_old.models.utils.get_dtype(dtype),
+                else lm_eval.models.utils.get_dtype(dtype),
             )
 
     def _model_generate(self, context, max_length, stop, **generation_kwargs):
@@ -139,7 +139,7 @@ class MambaLMWrapper(HFLM):
                 **generation_kwargs,
             )
         else:
-            stopping_criteria = lm_eval_old.models.utils.stop_sequences_criteria(
+            stopping_criteria = lm_eval.models.utils.stop_sequences_criteria(
                 self.tokenizer,
                 stop,
                 context.shape[1],

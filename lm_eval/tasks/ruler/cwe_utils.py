@@ -18,7 +18,7 @@ import datasets
 import wonderwords
 from tqdm import tqdm
 
-from lm_eval_old.tasks.ruler.common_utils import DEFAULT_SEQ_LENGTHS, get_tokenizer
+from lm_eval.tasks.ruler.common_utils import DEFAULT_SEQ_LENGTHS, get_tokenizer
 
 
 CONFIG = {

@@ -21,14 +21,14 @@ from typing import Any, Dict, List
 import datasets
 import numpy as np
 
-from lm_eval_old.tasks.score import utils
-from lm_eval_old.tasks.score.math.math_grader import (
+from lm_eval.tasks.score import utils
+from lm_eval.tasks.score.math.math_grader import (
     extract_answer,
     math_equal,
     normalize_answer_string,
 )
-from lm_eval_old.tasks.score.utils import robustness_doc_to_text
-from lm_eval_old.utils import eval_logger
+from lm_eval.tasks.score.utils import robustness_doc_to_text
+from lm_eval.utils import eval_logger
 
 
 TEMPLATE_FILE_PATH = os.path.join(os.path.dirname(__file__), "prompt_templates.json")

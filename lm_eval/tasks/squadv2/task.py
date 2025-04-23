@@ -20,8 +20,8 @@ from math import exp
 import datasets
 from packaging import version
 
-from lm_eval_old.api.instance import Instance
-from lm_eval_old.api.task import ConfigurableTask
+from lm_eval.api.instance import Instance
+from lm_eval.api.task import ConfigurableTask
 
 
 _CITATION = """

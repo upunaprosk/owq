@@ -16,7 +16,7 @@ import os
 import requests as _requests
 import time
 from tqdm import tqdm
-from lm_eval_old.base import BaseLM
+from lm_eval.base import BaseLM
 
 
 logger = logging.getLogger(__name__)

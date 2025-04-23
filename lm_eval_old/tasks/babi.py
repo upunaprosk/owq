@@ -3,8 +3,8 @@ Inspired by https://github.com/stanford-crfm/helm/blob/0eaaa62a2263ddb94e9850ee6
 """
 import numpy as np
 from collections import defaultdict
-from lm_eval_old.base import rf, Task
-from lm_eval_old.metrics import mean
+from lm_eval.base import rf, Task
+from lm_eval.metrics import mean
 
 
 _CITATION = """

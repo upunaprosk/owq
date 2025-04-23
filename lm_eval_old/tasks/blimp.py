@@ -10,8 +10,8 @@ grammars.
 
 Homepage: https://github.com/alexwarstadt/blimp
 """
-from lm_eval_old.base import rf, Task
-from lm_eval_old.metrics import mean
+from lm_eval.base import rf, Task
+from lm_eval.metrics import mean
 
 
 _CITATION = """

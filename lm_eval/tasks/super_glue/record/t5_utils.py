@@ -5,7 +5,7 @@ import string
 import numpy as np
 from datasets import Dataset
 
-from lm_eval_old.api.metrics import metric_max_over_ground_truths
+from lm_eval.api.metrics import metric_max_over_ground_truths
 
 
 def doc_to_text(doc):

@@ -1,7 +1,7 @@
 from functools import partial
 from os.path import basename, dirname
 
-from lm_eval_old.tasks.mmlu_prox.lang_libs import LANG_LIBS
+from lm_eval.tasks.mmlu_prox.lang_libs import LANG_LIBS
 
 
 lang_abbr = basename(dirname(__file__))

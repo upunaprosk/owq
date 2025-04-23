@@ -1,4 +1,4 @@
-from lm_eval_old.utils import weighted_f1_score
+from lm_eval.utils import weighted_f1_score
 
 
 def doc_to_text(doc):

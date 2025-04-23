@@ -4,9 +4,9 @@ from functools import cached_property
 from operator import itemgetter
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.api_models import TemplateAPI
-from lm_eval_old.models.utils import handle_stop_sequences
+from lm_eval.api.registry import register_model
+from lm_eval.models.api_models import TemplateAPI
+from lm_eval.models.utils import handle_stop_sequences
 
 
 eval_logger = logging.getLogger(__name__)

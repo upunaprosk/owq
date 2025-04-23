@@ -5,14 +5,14 @@ from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
 from tqdm import tqdm
 
-from lm_eval_old.api.instance import Instance
-from lm_eval_old.api.model import TemplateLM
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.utils import (
+from lm_eval.api.instance import Instance
+from lm_eval.api.model import TemplateLM
+from lm_eval.api.registry import register_model
+from lm_eval.models.utils import (
     Collator,
     handle_stop_sequences,
 )
-from lm_eval_old.utils import (
+from lm_eval.utils import (
     get_rolling_token_windows,
     make_disjoint_window,
 )
@@ -386,7 +386,7 @@ class SGLangLM(TemplateLM):
         The chat template is saved in the evaluation results for reproducibility.
         Boolean arguments should be used with models that have only one chat template,
         while string arguments are used with models that have multiple chat templates.
-        For the reference implementation, see HFLM class in `lm_eval_old.models.huggingface`.
+        For the reference implementation, see HFLM class in `lm_eval.models.huggingface`.
 
         Args:
             chat_template (Union[bool, str]): Specifies whether to apply a chat template:

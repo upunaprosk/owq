@@ -102,7 +102,7 @@ def add_env_info(storage: Dict[str, Any]):
     except Exception as err:
         pretty_env_info = str(err)
     try:
-        lm_eval_version = version("lm_eval_old")
+        lm_eval_version = version("lm_eval")
     except Exception as err:
         lm_eval_version = str(err)
     transformers_version = trans_version

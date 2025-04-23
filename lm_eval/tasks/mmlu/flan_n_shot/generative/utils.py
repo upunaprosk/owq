@@ -2,7 +2,7 @@ import re
 import sys
 import unicodedata
 
-from lm_eval_old.filters.extraction import RegexFilter
+from lm_eval.filters.extraction import RegexFilter
 
 
 class MultiChoiceRegexFilter(RegexFilter):

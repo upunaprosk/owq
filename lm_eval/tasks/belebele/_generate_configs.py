@@ -9,7 +9,7 @@ import requests
 import yaml
 from tqdm import tqdm
 
-from lm_eval_old.utils import logging
+from lm_eval.utils import logging
 
 
 API_URL = "https://datasets-server.huggingface.co/splits?dataset=facebook/belebele"

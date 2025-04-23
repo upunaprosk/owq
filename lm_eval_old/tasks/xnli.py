@@ -16,9 +16,9 @@ and may differ from the ones used by mGPT and XGLM (they do not provide their pr
 Homepage: https://github.com/facebookresearch/XNLI
 """
 import numpy as np
-from lm_eval_old.base import rf, Task
-from lm_eval_old.metrics import mean
-from lm_eval_old import utils
+from lm_eval.base import rf, Task
+from lm_eval.metrics import mean
+from lm_eval import utils
 
 _CITATIONS = """
 @InProceedings{conneau2018xnli,

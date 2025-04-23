@@ -12,8 +12,8 @@ Homepage: https://github.com/mjpost/sacrebleu/blob/master/sacrebleu/dataset.py
 import pycountry
 from pprint import pprint
 from sacrebleu import sacrebleu
-from lm_eval_old import metrics
-from lm_eval_old.base import Task, rf
+from lm_eval import metrics
+from lm_eval.base import Task, rf
 from typing import List
 
 try:

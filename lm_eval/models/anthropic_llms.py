@@ -5,10 +5,10 @@ from typing import Any, Dict, List, Tuple, Union
 
 from tqdm import tqdm
 
-from lm_eval_old.api.model import LM
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.openai_completions import LocalCompletionsAPI
-from lm_eval_old.models.utils import handle_stop_sequences, retry_on_specific_exceptions
+from lm_eval.api.model import LM
+from lm_eval.api.registry import register_model
+from lm_eval.models.openai_completions import LocalCompletionsAPI
+from lm_eval.models.utils import handle_stop_sequences, retry_on_specific_exceptions
 
 
 eval_logger = logging.getLogger(__name__)

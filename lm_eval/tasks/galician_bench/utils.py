@@ -8,7 +8,7 @@ import sacrebleu
 import transformers.data.metrics.squad_metrics as squad_metrics
 from rouge_score import rouge_scorer, scoring
 
-from lm_eval_old.utils import general_detokenize
+from lm_eval.utils import general_detokenize
 
 
 def lowercase_first_letter(text):

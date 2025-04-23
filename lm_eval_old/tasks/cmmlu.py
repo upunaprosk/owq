@@ -7,7 +7,7 @@ CMMLU covers a wide range of subjects, comprising 67 topics that span from eleme
 
 Homepage: https://github.com/haonan-li/CMMLU
 """
-from lm_eval_old.base import MultipleChoiceTask
+from lm_eval.base import MultipleChoiceTask
 
 _CITATION = """
 @misc{li2023cmmlu,

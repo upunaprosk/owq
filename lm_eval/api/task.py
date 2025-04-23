@@ -24,11 +24,11 @@ import datasets
 import numpy as np
 from tqdm import tqdm
 
-from lm_eval_old import utils
-from lm_eval_old.api import samplers
-from lm_eval_old.api.instance import Instance, OutputType
-from lm_eval_old.api.metrics import bits_per_byte, mean, weighted_perplexity
-from lm_eval_old.api.registry import (
+from lm_eval import utils
+from lm_eval.api import samplers
+from lm_eval.api.instance import Instance, OutputType
+from lm_eval.api.metrics import bits_per_byte, mean, weighted_perplexity
+from lm_eval.api.registry import (
     AGGREGATION_REGISTRY,
     DEFAULT_METRIC_REGISTRY,
     get_aggregation,
@@ -36,9 +36,9 @@ from lm_eval_old.api.registry import (
     get_metric_aggregation,
     is_higher_better,
 )
-from lm_eval_old.caching.cache import load_from_cache, save_to_cache
-from lm_eval_old.filters import build_filter_ensemble
-from lm_eval_old.prompts import get_prompt
+from lm_eval.caching.cache import load_from_cache, save_to_cache
+from lm_eval.filters import build_filter_ensemble
+from lm_eval.prompts import get_prompt
 
 
 ALL_OUTPUT_TYPES = [

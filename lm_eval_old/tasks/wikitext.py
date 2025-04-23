@@ -10,7 +10,7 @@ NOTE: This `Task` is based on WikiText-2.
 Homepage: https://www.salesforce.com/products/einstein/ai-research/the-wikitext-dependency-language-modeling-dataset/
 """
 import re
-from lm_eval_old.base import PerplexityTask
+from lm_eval.base import PerplexityTask
 
 
 _CITATION = """

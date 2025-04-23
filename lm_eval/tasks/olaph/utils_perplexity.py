@@ -1,6 +1,6 @@
 import re
 
-from lm_eval_old.tasks.olaph.utils import doc_to_target
+from lm_eval.tasks.olaph.utils import doc_to_target
 
 
 def process_results(doc, results):

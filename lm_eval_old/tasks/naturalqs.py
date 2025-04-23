@@ -15,7 +15,7 @@ not even bother with the train set.
 
 Homepage: https://ai.google.com/research/NaturalQuestions
 """
-from lm_eval_old.base import Task
+from lm_eval.base import Task
 from itertools import islice
 
 

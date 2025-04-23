@@ -30,8 +30,8 @@ def setup_logging(verbosity=logging.INFO):
     # Configure the root logger
     class CustomFormatter(logging.Formatter):
         def format(self, record):
-            if record.name.startswith("lm_eval_old."):
-                record.name = record.name[len("lm_eval_old.") :]
+            if record.name.startswith("lm_eval."):
+                record.name = record.name[len("lm_eval.") :]
             return super().format(record)
 
     formatter = CustomFormatter(

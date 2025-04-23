@@ -3,7 +3,7 @@ import re
 import sys
 import unicodedata
 
-from lm_eval_old.filters.extraction import Filter, RegexFilter
+from lm_eval.filters.extraction import Filter, RegexFilter
 
 
 class ExtendedRegexFilter(RegexFilter):

@@ -13,8 +13,8 @@ import torch
 import torch.nn.functional as F
 from accelerate import find_executable_batch_size
 
-from lm_eval_old.metrics import mean, weighted_perplexity, weighted_mean, bits_per_byte
-from lm_eval_old import utils
+from lm_eval.metrics import mean, weighted_perplexity, weighted_mean, bits_per_byte
+from lm_eval import utils
 from abc import abstractmethod
 
 

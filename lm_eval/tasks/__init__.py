@@ -5,10 +5,10 @@ import os
 from functools import partial
 from typing import Dict, List, Mapping, Optional, Union
 
-from lm_eval_old import utils
-from lm_eval_old.api.group import ConfigurableGroup, GroupConfig
-from lm_eval_old.api.task import ConfigurableTask, Task
-from lm_eval_old.evaluator_utils import get_subtask_list
+from lm_eval import utils
+from lm_eval.api.group import ConfigurableGroup, GroupConfig
+from lm_eval.api.task import ConfigurableTask, Task
+from lm_eval.evaluator_utils import get_subtask_list
 
 
 GROUP_ONLY_KEYS = list(GroupConfig().to_dict().keys())
@@ -17,7 +17,7 @@ eval_logger = logging.getLogger(__name__)
 
 
 class TaskManager:
-    """TaskManager indexes all tasks from the default `lm_eval_old/tasks/`
+    """TaskManager indexes all tasks from the default `lm_eval/tasks/`
     and an optional directory if provided.
 
     """
@@ -65,7 +65,7 @@ class TaskManager:
             An additional path to be searched for tasks recursively.
             Can provide more than one such path as a list.
         :param include_defaults: bool = True
-            If set to false, default tasks (those in lm_eval_old/tasks/) are not indexed.
+            If set to false, default tasks (those in lm_eval/tasks/) are not indexed.
         return
             Dictionary of task names as key and task metadata
         """
@@ -111,10 +111,10 @@ class TaskManager:
         from pytablewriter import MarkdownTableWriter
 
         def sanitize_path(path):
-            # don't print full path if we are within the lm_eval_old/tasks dir !
+            # don't print full path if we are within the lm_eval/tasks dir !
             # if we aren't though, provide the full path.
-            if "lm_eval_old/tasks/" in path:
-                return "lm_eval_old/tasks/" + path.split("lm_eval_old/tasks/")[-1]
+            if "lm_eval/tasks/" in path:
+                return "lm_eval/tasks/" + path.split("lm_eval/tasks/")[-1]
             else:
                 return path
 
@@ -565,7 +565,7 @@ def get_task_name_from_object(task_object):
 
 def _check_duplicates(task_dict: dict) -> None:
     """helper function solely used in validating get_task_dict output.
-    Takes the output of lm_eval_old.evaluator_utils.get_subtask_list and
+    Takes the output of lm_eval.evaluator_utils.get_subtask_list and
     returns a list of all leaf subtasks contained within, and errors if any such leaf subtasks are
     "oversubscribed" to several disjoint groups.
     """
@@ -597,7 +597,7 @@ def get_task_dict(
     """Creates a dictionary of task objects from either a name of task, config, or prepared Task object.
 
     :param task_name_list: List[Union[str, Dict, Task]]
-        Name of model or LM object, see lm_eval_old.models.get_model
+        Name of model or LM object, see lm_eval.models.get_model
     :param task_manager: TaskManager = None
         A TaskManager object that stores indexed tasks. If not set,
         task_manager will load one. This should be set by the user

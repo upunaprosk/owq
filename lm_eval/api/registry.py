@@ -3,7 +3,7 @@ from typing import Callable, Dict, Union
 
 import evaluate as hf_evaluate
 
-from lm_eval_old.api.model import LM
+from lm_eval.api.model import LM
 
 
 eval_logger = logging.getLogger(__name__)

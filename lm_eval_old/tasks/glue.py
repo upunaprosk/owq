@@ -14,9 +14,9 @@ respect to a wide range of linguistic phenomena found in natural language.
 Homepage: https://gluebenchmark.com/
 """
 import numpy as np
-from lm_eval_old.base import rf, Task
-from lm_eval_old.metrics import mean, matthews_corrcoef, f1_score, yesno
-from lm_eval_old.utils import general_detokenize
+from lm_eval.base import rf, Task
+from lm_eval.metrics import mean, matthews_corrcoef, f1_score, yesno
+from lm_eval.utils import general_detokenize
 
 
 # TODO(jon-tow): Add citations for the individual datasets/tasks that make up GLUE.

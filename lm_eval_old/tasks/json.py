@@ -1,7 +1,7 @@
 import datasets
 
-from lm_eval_old.base import PerplexityTask
-from lm_eval_old.utils import escaped_split
+from lm_eval.base import PerplexityTask
+from lm_eval.utils import escaped_split
 
 
 class JsonPerplexity(PerplexityTask):

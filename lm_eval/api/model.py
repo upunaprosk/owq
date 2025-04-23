@@ -9,7 +9,7 @@ import transformers
 from sqlitedict import SqliteDict
 from tqdm import tqdm
 
-from lm_eval_old import utils
+from lm_eval import utils
 
 
 eval_logger = logging.getLogger(__name__)

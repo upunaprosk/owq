@@ -6,15 +6,15 @@ import transformers
 from more_itertools import distribute
 from tqdm import tqdm
 
-from lm_eval_old.api.instance import Instance
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.utils import (
+from lm_eval.api.instance import Instance
+from lm_eval.api.registry import register_model
+from lm_eval.models.utils import (
     Collator,
     handle_stop_sequences,
     replace_placeholders,
     undistribute,
 )
-from lm_eval_old.models.vllm_causallms import VLLM
+from lm_eval.models.vllm_causallms import VLLM
 
 
 eval_logger = logging.getLogger(__name__)

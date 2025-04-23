@@ -25,11 +25,11 @@ from transformers.models.auto.modeling_auto import (
     MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES,
 )
 
-from lm_eval_old import utils
-from lm_eval_old.api.instance import Instance
-from lm_eval_old.api.model import TemplateLM
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.utils import (
+from lm_eval import utils
+from lm_eval.api.instance import Instance
+from lm_eval.api.model import TemplateLM
+from lm_eval.api.registry import register_model
+from lm_eval.models.utils import (
     Collator,
     clear_torch_cache,
     configure_pad_token,

@@ -9,7 +9,7 @@ import datasets
 if TYPE_CHECKING:
     from random import Random
 
-    from lm_eval_old.api.task import ConfigurableTask, Task
+    from lm_eval.api.task import ConfigurableTask, Task
 
 eval_logger = logging.getLogger("lm-eval")
 

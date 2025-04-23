@@ -4,7 +4,7 @@ from itertools import product
 import evaluate
 import transformers.data.metrics.squad_metrics as squad_metrics
 
-from lm_eval_old.utils import general_detokenize
+from lm_eval.utils import general_detokenize
 
 
 def process_results_qa(doc, results):

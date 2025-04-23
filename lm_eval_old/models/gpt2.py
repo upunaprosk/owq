@@ -1,7 +1,7 @@
 import torch
 import transformers
 from typing import Optional, Union
-from lm_eval_old.base import BaseLM
+from lm_eval.base import BaseLM
 import os
 # import deepspeed
 # from deepspeed import comm as dist

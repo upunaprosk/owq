@@ -18,7 +18,7 @@ from huggingface_hub import (
 )
 from huggingface_hub.utils import build_hf_headers, get_session, hf_raise_for_status
 
-from lm_eval_old.utils import (
+from lm_eval.utils import (
     get_file_datetime,
     get_file_task_name,
     get_results_filenames,

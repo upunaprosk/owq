@@ -1,4 +1,4 @@
-from lm_eval_old.utils import general_detokenize
+from lm_eval.utils import general_detokenize
 
 
 def default_doc_to_text(x):

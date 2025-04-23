@@ -9,9 +9,9 @@ Homepage: https://github.com/Nealcly/MuTual
 """
 import numpy as np
 import inspect
-import lm_eval_old.datasets.mutual.mutual
-from lm_eval_old.base import Task, rf
-from lm_eval_old.metrics import mean
+import lm_eval.datasets.mutual.mutual
+from lm_eval.base import Task, rf
+from lm_eval.metrics import mean
 
 
 _CITATION = """
@@ -27,7 +27,7 @@ _CITATION = """
 
 class MuTualBase(Task):
     VERSION = 1
-    DATASET_PATH = inspect.getfile(lm_eval_old.datasets.mutual.mutual)
+    DATASET_PATH = inspect.getfile(lm_eval.datasets.mutual.mutual)
     DATASET_NAME = None
     CHOICES = ["A", "B", "C", "D"]
 

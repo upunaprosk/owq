@@ -20,9 +20,9 @@ from typing import Any, Dict, List
 import numpy as np
 from datasets import Dataset
 
-from lm_eval_old.tasks.score import utils
-from lm_eval_old.tasks.score.utils import prompt_consistency_rate, robustness_doc_to_text
-from lm_eval_old.utils import eval_logger
+from lm_eval.tasks.score import utils
+from lm_eval.tasks.score.utils import prompt_consistency_rate, robustness_doc_to_text
+from lm_eval.utils import eval_logger
 
 
 TEMPLATE_FILE_PATH = os.path.join(os.path.dirname(__file__), "prompt_templates.json")

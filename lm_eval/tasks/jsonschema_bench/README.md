@@ -33,7 +33,7 @@ If you don't have enough memory to run the `hard` task, you can use the `--max_l
 
 Here is an example of how to run 10 instances of the `jsonschema_bench_easy` task :
 ```bash
-lm_eval_old \
+lm_eval \
     --model hf --gen_kwargs max_new_tokens=1024 \
     --model_args pretrained=meta-llama/Llama-3.2-1B-Instruct,parallelize=True\
     --tasks jsonschema_bench_medium \

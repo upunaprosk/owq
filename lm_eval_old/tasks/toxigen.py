@@ -6,7 +6,7 @@ Classify input text as either hateful or not hateful.
 
 Homepage: https://github.com/microsoft/TOXIGEN
 """
-from lm_eval_old.base import MultipleChoiceTask
+from lm_eval.base import MultipleChoiceTask
 import numpy as np
 import pandas as pd
 

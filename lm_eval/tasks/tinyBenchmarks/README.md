@@ -41,7 +41,7 @@ To obtain the estimated accuracies from all methods from the original paper, the
 To do so, run the evaluation with the `--log_samples` and `--output_path` arguments. For example:
 
 ```bash
-lm_eval_old --model hf  \
+lm_eval --model hf  \
         --model_args pretrained="mistralai/Mistral-7B-Instruct-v0.2" \
         --tasks tinyHellaswag \
         --batch_size 4 \

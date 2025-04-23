@@ -21,7 +21,7 @@ Homepage: https://leaderboard.allenai.org/mctaco/submissions/public
 """
 import numpy as np
 from collections import defaultdict
-from lm_eval_old.base import rf, Task
+from lm_eval.base import rf, Task
 
 
 _CITATION = """

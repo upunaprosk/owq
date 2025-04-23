@@ -5,15 +5,15 @@ import pathlib
 import sys
 from typing import List, Optional, Tuple, Union
 
-from lm_eval_old.api.group import ConfigurableGroup
-from lm_eval_old.api.metrics import (
+from lm_eval.api.group import ConfigurableGroup
+from lm_eval.api.metrics import (
     aggregate_subtask_metrics,
     mean,
     pooled_sample_stderr,
     stderr_for_metric,
 )
-from lm_eval_old.api.task import Task
-from lm_eval_old.utils import positional_deprecated
+from lm_eval.api.task import Task
+from lm_eval.utils import positional_deprecated
 
 
 eval_logger = logging.getLogger(__name__)

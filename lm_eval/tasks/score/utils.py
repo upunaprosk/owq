@@ -24,7 +24,7 @@ from typing import Any, Dict, List
 import numpy as np
 from datasets import Dataset
 
-from lm_eval_old.utils import eval_logger
+from lm_eval.utils import eval_logger
 
 
 NUMERALS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]

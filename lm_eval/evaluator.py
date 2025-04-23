@@ -9,12 +9,12 @@ from typing import TYPE_CHECKING, List, Optional, Union
 import numpy as np
 import torch
 
-import lm_eval_old.api.metrics
-import lm_eval_old.api.registry
-import lm_eval_old.api.task
-import lm_eval_old.models
-from lm_eval_old.caching.cache import delete_cache
-from lm_eval_old.evaluator_utils import (
+import lm_eval.api.metrics
+import lm_eval.api.registry
+import lm_eval.api.task
+import lm_eval.models
+from lm_eval.caching.cache import delete_cache
+from lm_eval.evaluator_utils import (
     consolidate_group_results,
     consolidate_results,
     get_sample_size,
@@ -24,10 +24,10 @@ from lm_eval_old.evaluator_utils import (
     print_writeout,
     run_task_tests,
 )
-from lm_eval_old.loggers import EvaluationTracker
-from lm_eval_old.loggers.utils import add_env_info, add_tokenizer_info, get_git_commit_hash
-from lm_eval_old.tasks import TaskManager, get_task_dict
-from lm_eval_old.utils import (
+from lm_eval.loggers import EvaluationTracker
+from lm_eval.loggers.utils import add_env_info, add_tokenizer_info, get_git_commit_hash
+from lm_eval.tasks import TaskManager, get_task_dict
+from lm_eval.utils import (
     handle_non_serializable,
     hash_string,
     positional_deprecated,
@@ -37,8 +37,8 @@ from lm_eval_old.utils import (
 
 
 if TYPE_CHECKING:
-    from lm_eval_old.api.model import LM
-    from lm_eval_old.api.task import Task
+    from lm_eval.api.model import LM
+    from lm_eval.api.task import Task
 
 eval_logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ def simple_evaluate(
     """Instantiate and evaluate a model on a list of tasks.
 
     :param model: Union[str, LM]
-        Name of model or LM object, see lm_eval_old.models.get_model
+        Name of model or LM object, see lm_eval.models.get_model
     :param model_args: Optional[str, dict]
         String or dict arguments for each model class, see LM.create_from_arg_string and LM.create_from_arg_object.
         Ignored if `model` argument is a LM object.
@@ -210,7 +210,7 @@ def simple_evaluate(
             eval_logger.info(
                 f"Initializing {model} model, with arguments: {model_args}"
             )
-            lm = lm_eval_old.api.registry.get_model(model).create_from_arg_obj(
+            lm = lm_eval.api.registry.get_model(model).create_from_arg_obj(
                 model_args,
                 {
                     "batch_size": batch_size,
@@ -223,7 +223,7 @@ def simple_evaluate(
             eval_logger.info(
                 f"Initializing {model} model, with arguments: {simple_parse_args_string(model_args)}"
             )
-            lm = lm_eval_old.api.registry.get_model(model).create_from_arg_string(
+            lm = lm_eval.api.registry.get_model(model).create_from_arg_string(
                 model_args,
                 {
                     "batch_size": batch_size,
@@ -232,16 +232,16 @@ def simple_evaluate(
                 },
             )
     else:
-        if not isinstance(model, lm_eval_old.api.model.LM):
+        if not isinstance(model, lm_eval.api.model.LM):
             raise TypeError(
-                f"The value of `model` passed to simple_evaluate() was of type {type(model)}, but is required to be a subclass of lm_eval_old.api.model.LM . This may be because you are passing an initialized Hugging Face PreTrainedModel without having wrapped it in `lm_eval_old.models.huggingface.HFLM(pretrained=my_model)` first."
+                f"The value of `model` passed to simple_evaluate() was of type {type(model)}, but is required to be a subclass of lm_eval.api.model.LM . This may be because you are passing an initialized Hugging Face PreTrainedModel without having wrapped it in `lm_eval.models.huggingface.HFLM(pretrained=my_model)` first."
             )
         eval_logger.info("Using pre-initialized model")
         lm = model
 
     if use_cache is not None:
         eval_logger.info(f"Using cache at {use_cache + '_rank' + str(lm.rank) + '.db'}")
-        lm = lm_eval_old.api.model.CachingLM(
+        lm = lm_eval.api.model.CachingLM(
             lm,
             use_cache
             # each rank receives a different cache db.
@@ -368,7 +368,7 @@ def simple_evaluate(
             "model_args": model_args,
         }
         # add more detailed model info if available
-        if isinstance(lm, lm_eval_old.models.huggingface.HFLM):
+        if isinstance(lm, lm_eval.models.huggingface.HFLM):
             results["config"].update(lm.get_model_info())
         # add info about execution
         results["config"].update(

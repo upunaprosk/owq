@@ -8,7 +8,7 @@ import os
 import yaml
 from tqdm import tqdm
 
-from lm_eval_old.logger import eval_logger
+from lm_eval.logger import eval_logger
 
 
 SUBSETS = ["WR", "GR", "RCS", "RCSS", "RCH", "LI"]

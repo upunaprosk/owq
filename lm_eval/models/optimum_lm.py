@@ -3,8 +3,8 @@ import logging
 from importlib.util import find_spec
 from pathlib import Path
 
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.huggingface import HFLM
+from lm_eval.api.registry import register_model
+from lm_eval.models.huggingface import HFLM
 
 
 eval_logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class OptimumLM(HFLM):
     Intel® architectures using OpenVINO™ runtime.
 
     To use an OpenVINO config, use `--model_args ov_config` to point to a json file with an OpenVINO config:
-    `lm_eval_old --model openvino --model_args pretrained=gpt2,ov_config=config.json --task lambada_openai`
+    `lm_eval --model openvino --model_args pretrained=gpt2,ov_config=config.json --task lambada_openai`
     Example json file contents: {"INFERENCE_PRECISION_HINT": "f32", "CACHE_DIR": "model_cache"}
     """
 

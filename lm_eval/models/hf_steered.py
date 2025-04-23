@@ -8,8 +8,8 @@ from peft.peft_model import PeftModel
 from torch import Tensor, nn
 from transformers import PreTrainedModel
 
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.huggingface import HFLM
+from lm_eval.api.registry import register_model
+from lm_eval.models.huggingface import HFLM
 
 
 @contextmanager

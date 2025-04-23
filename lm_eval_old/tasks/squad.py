@@ -15,7 +15,7 @@ Homepage: https://rajpurkar.github.io/SQuAD-explorer/
 """
 import datasets
 from math import exp
-from lm_eval_old.base import rf, Task
+from lm_eval.base import rf, Task
 from functools import partial
 from packaging import version
 

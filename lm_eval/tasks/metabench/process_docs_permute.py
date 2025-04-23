@@ -21,7 +21,7 @@ def process_arc(dataset: datasets.Dataset) -> datasets.Dataset:
             answer = doc[f"arc_choices_shot_{shot}"]["text"][answer_idx]
             doc.pop(f"arc_choices_shot_{shot}")
             doc.pop(f"arc_idx_shot_{shot}")
-            long_prompt = f"{long_prompt}Question: {question}\nAnswer: {answer}\n\n"  # no choices are provided in the few-shot setting (per lines 602-610 of lm_eval_old.api.task)
+            long_prompt = f"{long_prompt}Question: {question}\nAnswer: {answer}\n\n"  # no choices are provided in the few-shot setting (per lines 602-610 of lm_eval.api.task)
         doc["twentyfive_shot_preprompt"] = long_prompt
         doc.pop("alltwentyfiveshot_longprompt")
         doc["original_hash"] = hash_string(doc["question"])

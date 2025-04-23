@@ -25,7 +25,7 @@ less than `PRUNE_MAX_TOKENS` for ALL of the tokenizers. This can be useful to co
 that use different tokenizers but the same maximum sequence length.
 
 Once the subset task class has been defined in this file, it can be used by adding the class
-to `lm_eval_old/tasks/__init__.py`.
+to `lm_eval/tasks/__init__.py`.
 
 NOTE: GovReport may need `max_gen_toks` set larger for causal models.
 """
@@ -33,8 +33,8 @@ from abc import abstractmethod
 # from datasets import load_metric
 import evaluate
 from transformers import AutoTokenizer
-from lm_eval_old.base import rf, Task
-from lm_eval_old.metrics import mean
+from lm_eval.base import rf, Task
+from lm_eval.metrics import mean
 from functools import reduce
 import transformers.data.metrics.squad_metrics as squad_metrics
 import numpy as np

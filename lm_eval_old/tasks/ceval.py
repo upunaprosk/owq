@@ -8,7 +8,7 @@ and four difficulty levels.
 
 Homepage: https://cevalbenchmark.com/
 """
-from lm_eval_old.base import MultipleChoiceTask
+from lm_eval.base import MultipleChoiceTask
 
 _CITATION = """
 @article{huang2023ceval,

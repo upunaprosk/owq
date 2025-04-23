@@ -3,8 +3,8 @@ from typing import List
 
 import numpy as np
 
-from lm_eval_old.api.instance import Instance
-from lm_eval_old.api.task import ConfigurableTask
+from lm_eval.api.instance import Instance
+from lm_eval.api.task import ConfigurableTask
 
 
 class SWDE(ConfigurableTask):

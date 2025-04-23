@@ -18,9 +18,9 @@ import os
 import requests as _requests
 from tqdm import tqdm
 
-from lm_eval_old.api.model import LM
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.utils import retry_on_specific_exceptions
+from lm_eval.api.model import LM
+from lm_eval.api.registry import register_model
+from lm_eval.models.utils import retry_on_specific_exceptions
 
 
 logger = logging.getLogger(__name__)

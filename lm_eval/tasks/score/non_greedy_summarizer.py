@@ -23,8 +23,8 @@ from typing import List
 
 import pandas as pd
 
-from lm_eval_old.tasks.score.math.math_grader import math_equal
-from lm_eval_old.utils import handle_non_serializable, make_table
+from lm_eval.tasks.score.math.math_grader import math_equal
+from lm_eval.utils import handle_non_serializable, make_table
 
 
 N_SEEDS = 5

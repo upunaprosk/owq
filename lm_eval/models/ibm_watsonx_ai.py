@@ -8,11 +8,11 @@ from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Type, cast
 
 from tqdm import tqdm
 
-from lm_eval_old.api.instance import Instance
-from lm_eval_old.api.model import LM
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.api_models import JsonChatStr
-from lm_eval_old.utils import simple_parse_args_string
+from lm_eval.api.instance import Instance
+from lm_eval.api.model import LM
+from lm_eval.api.registry import register_model
+from lm_eval.models.api_models import JsonChatStr
+from lm_eval.utils import simple_parse_args_string
 
 
 eval_logger = logging.getLogger(__name__)
@@ -83,7 +83,7 @@ def get_watsonx_credentials() -> Dict[str, str]:
         from dotenv import load_dotenv
     except ImportError:
         raise ImportError(
-            "Could not import dotenv: Please install lm_eval_old[ibm_watsonx_ai] package."
+            "Could not import dotenv: Please install lm_eval[ibm_watsonx_ai] package."
         )
 
     # This function attempts to load a file named .env starting from the CWD and working backwards
@@ -115,7 +115,7 @@ def get_watsonx_credentials() -> Dict[str, str]:
 @register_model("watsonx_llm")
 class WatsonxLLM(LM):
     """
-    Implementation of LM model interface for evaluating Watsonx model with the lm_eval_old framework.
+    Implementation of LM model interface for evaluating Watsonx model with the lm_eval framework.
     See https://github.com/EleutherAI/lm-evaluation-harness/blob/main/docs/model_guide.md for reference.
     """
 
@@ -132,7 +132,7 @@ class WatsonxLLM(LM):
             from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
         except ImportError:
             raise ImportError(
-                "Could not import ibm_watsonx_ai: Please install lm_eval_old[ibm_watsonx_ai] package."
+                "Could not import ibm_watsonx_ai: Please install lm_eval[ibm_watsonx_ai] package."
             )
 
         args = simple_parse_args_string(arg_string)
@@ -195,7 +195,7 @@ class WatsonxLLM(LM):
             from ibm_watsonx_ai.foundation_models import ModelInference
         except ImportError:
             raise ImportError(
-                "Could not import ibm_watsonx_ai: Please install lm_eval_old[ibm_watsonx_ai] package."
+                "Could not import ibm_watsonx_ai: Please install lm_eval[ibm_watsonx_ai] package."
             )
         super().__init__()
         client = APIClient(watsonx_credentials)
@@ -337,7 +337,7 @@ class WatsonxLLM(LM):
             from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
         except ImportError:
             raise ImportError(
-                "Could not import ibm_watsonx_ai: Please install lm_eval_old[ibm_watsonx_ai] package."
+                "Could not import ibm_watsonx_ai: Please install lm_eval[ibm_watsonx_ai] package."
             )
         self._check_model_logprobs_support()
         generate_params = copy.copy(self.generate_params)
@@ -399,7 +399,7 @@ class WatsonxLLM(LM):
             from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
         except ImportError:
             raise ImportError(
-                "Could not import ibm_watsonx_ai: Please install lm_eval_old[ibm_watsonx_ai] package."
+                "Could not import ibm_watsonx_ai: Please install lm_eval[ibm_watsonx_ai] package."
             )
         self._check_model_logprobs_support()
         generate_params = copy.deepcopy(self.generate_params)

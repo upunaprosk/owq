@@ -1,8 +1,8 @@
 import os
 import numpy as np
 import transformers
-from lm_eval_old.base import BaseLM
-from lm_eval_old import utils
+from lm_eval.base import BaseLM
+from lm_eval import utils
 from tqdm import tqdm
 import time
 

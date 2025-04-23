@@ -1,6 +1,6 @@
 import re
 
-from lm_eval_old.tasks.mts_dialog.utils import doc_to_target
+from lm_eval.tasks.mts_dialog.utils import doc_to_target
 
 
 def process_results(doc, results):

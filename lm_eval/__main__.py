@@ -7,11 +7,11 @@ from functools import partial
 from pathlib import Path
 from typing import Union
 
-from lm_eval_old import evaluator, utils
-from lm_eval_old.evaluator import request_caching_arg_to_dict
-from lm_eval_old.loggers import EvaluationTracker, WandbLogger
-from lm_eval_old.tasks import TaskManager
-from lm_eval_old.utils import (
+from lm_eval import evaluator, utils
+from lm_eval.evaluator import request_caching_arg_to_dict
+from lm_eval.loggers import EvaluationTracker, WandbLogger
+from lm_eval.tasks import TaskManager
+from lm_eval.utils import (
     handle_non_serializable,
     make_table,
     simple_parse_args_string,
@@ -430,7 +430,7 @@ def cli_evaluate(args: Union[argparse.Namespace, None] = None) -> None:
         )
         # HACK: import datasets and override its HF_DATASETS_TRUST_REMOTE_CODE value internally,
         # because it's already been determined based on the prior env var before launching our
-        # script--`datasets` gets imported by lm_eval_old internally before these lines can update the env.
+        # script--`datasets` gets imported by lm_eval internally before these lines can update the env.
         import datasets
 
         datasets.config.HF_DATASETS_TRUST_REMOTE_CODE = True

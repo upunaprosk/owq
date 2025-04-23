@@ -9,7 +9,7 @@ from typing import List
 import numpy as np
 import sacrebleu
 
-from lm_eval_old.api.registry import register_aggregation, register_metric
+from lm_eval.api.registry import register_aggregation, register_metric
 
 
 eval_logger = logging.getLogger(__name__)

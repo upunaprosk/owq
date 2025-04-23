@@ -46,7 +46,7 @@ The following Evalita-LLM tasks can also be evaluated in isolation:
 
 ```bash
 
-lm_eval_old --model hf --model_args pretrained=meta-llama/Llama-2-7b-hf --tasks evalita-mp --device cuda:0 --batch_size auto
+lm_eval --model hf --model_args pretrained=meta-llama/Llama-2-7b-hf --tasks evalita-mp --device cuda:0 --batch_size auto
 ```
 
 ### Checklist

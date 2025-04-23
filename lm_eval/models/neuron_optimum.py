@@ -11,11 +11,11 @@ from tqdm import tqdm
 from transformers import GenerationConfig
 from transformers.generation import StoppingCriteriaList
 
-import lm_eval_old.models.utils
-from lm_eval_old import utils
-from lm_eval_old.api.model import TemplateLM
-from lm_eval_old.api.registry import register_model
-from lm_eval_old.models.utils import stop_sequences_criteria
+import lm_eval.models.utils
+from lm_eval import utils
+from lm_eval.api.model import TemplateLM
+from lm_eval.api.registry import register_model
+from lm_eval.models.utils import stop_sequences_criteria
 
 
 try:
@@ -193,7 +193,7 @@ class NEURON_HF(TemplateLM):
                     " For inf2.24xlarge, set it <= `12`."
                     " For inf2.48xlarge, set it <= `24`."
                 )
-            torch_dtype = lm_eval_old.models.utils.get_dtype(dtype)
+            torch_dtype = lm_eval.models.utils.get_dtype(dtype)
 
             if torch_dtype == torch.float16:
                 self.amp_dtype = "f16"
@@ -436,7 +436,7 @@ class NEURON_HF(TemplateLM):
         # automatic (variable) batch size detection for vectorization
         # pull longest context sample from request
 
-        chunks = lm_eval_old.models.utils.chunks(
+        chunks = lm_eval.models.utils.chunks(
             re_ord.get_reordered(),
             n=self.batch_size,
             fn=None,
@@ -494,11 +494,11 @@ class NEURON_HF(TemplateLM):
                 ] * (self.batch_size - len(inps))
 
             masks = [torch.ones_like(inp) for inp in inps]
-            batched_inps = lm_eval_old.models.utils.pad_and_concat(
+            batched_inps = lm_eval.models.utils.pad_and_concat(
                 padding_len_inp, inps, padding_side="right"
             )  # [batch, padding_len_inp]
 
-            batched_masks = lm_eval_old.models.utils.pad_and_concat(
+            batched_masks = lm_eval.models.utils.pad_and_concat(
                 padding_len_inp, masks, padding_side="right"
             )
             if self.model.model.neuron_config.output_all_logits:
@@ -579,7 +579,7 @@ class NEURON_HF(TemplateLM):
         # we group requests by their generation_kwargs,
         # so that we don't try to execute e.g. greedy sampling and temp=0.8 sampling
         # in the same batch.
-        grouper = lm_eval_old.models.utils.Grouper(requests, lambda x: str(x.args[1]))
+        grouper = lm_eval.models.utils.Grouper(requests, lambda x: str(x.args[1]))
         for key, reqs in grouper.get_grouped().items():
             # within each set of reqs for given kwargs, we reorder by token length, descending.
             re_ords[key] = utils.Reorderer([req.args for req in reqs], _collate)
@@ -588,7 +588,7 @@ class NEURON_HF(TemplateLM):
 
         # for each different set of kwargs, we execute all requests, by batch.
         for key, re_ord in re_ords.items():
-            chunks = lm_eval_old.models.utils.chunks(
+            chunks = lm_eval.models.utils.chunks(
                 re_ord.get_reordered(), n=self.batch_size
             )
             for chunk in tqdm(chunks, disable=self.rank != 0):

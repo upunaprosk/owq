@@ -12,7 +12,7 @@ but not humans.
 
 Homepage: https://rowanzellers.com/swag/
 """
-from lm_eval_old.base import MultipleChoiceTask
+from lm_eval.base import MultipleChoiceTask
 
 
 _CITATION = """

@@ -32,10 +32,10 @@ except ModuleNotFoundError:
 
 from importlib.util import find_spec
 
-from lm_eval_old import utils
-from lm_eval_old.api.instance import Instance
-from lm_eval_old.api.model import TemplateLM
-from lm_eval_old.models.utils import Collator, chunks, configure_pad_token
+from lm_eval import utils
+from lm_eval.api.instance import Instance
+from lm_eval.api.model import TemplateLM
+from lm_eval.models.utils import Collator, chunks, configure_pad_token
 
 
 eval_logger = logging.getLogger(__name__)
