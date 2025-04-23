@@ -201,7 +201,7 @@ class HFLM(TemplateLM):
         # added for owq
 
         if load_owq:
-            ckpt = torch.load(load_owq)
+            ckpt = torch.load(load_owq, weights_only=False)
             dtype = ckpt['dtype']
             wbits = ckpt['bits']
         def skip(*args, **kwargs):
