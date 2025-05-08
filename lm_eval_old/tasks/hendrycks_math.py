@@ -9,9 +9,9 @@ models to generate answer derivations and explanations.
 Homepage: https://github.com/hendrycks/math
 """
 import inspect
-import lm_eval.datasets.hendrycks_math.hendrycks_math
-from lm_eval.metrics import mean
-from lm_eval.base import Task, rf
+import lm_eval_old.datasets.hendrycks_math.hendrycks_math
+from lm_eval_old.metrics import mean
+from lm_eval_old.base import Task, rf
 
 
 _CITATION = """
@@ -25,7 +25,7 @@ _CITATION = """
 
 
 class Math(Task):
-    DATASET_PATH = inspect.getfile(lm_eval.datasets.hendrycks_math.hendrycks_math)
+    DATASET_PATH = inspect.getfile(lm_eval_old.datasets.hendrycks_math.hendrycks_math)
     DATASET_NAME = None
 
     def has_training_docs(self):

@@ -23,8 +23,8 @@ import numpy as np
 import sacrebleu
 import datasets
 from rouge_score import rouge_scorer, scoring
-from lm_eval.base import rf, Task
-from lm_eval.metrics import mean
+from lm_eval_old.base import rf, Task
+from lm_eval_old.metrics import mean
 
 
 try:

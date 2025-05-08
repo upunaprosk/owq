@@ -15,9 +15,9 @@ NOTE: We currently ignore formulas for answer generation.
 Homepage: https://github.com/chaochun/nlu-asdiv-dataset
 """
 import inspect
-import lm_eval.datasets.asdiv.asdiv
-from lm_eval.base import rf, Task
-from lm_eval.metrics import mean
+import lm_eval_old.datasets.asdiv.asdiv
+from lm_eval_old.base import rf, Task
+from lm_eval_old.metrics import mean
 
 
 _CITATION = """
@@ -34,7 +34,7 @@ _CITATION = """
 
 class Asdiv(Task):
     VERSION = 0
-    DATASET_PATH = inspect.getfile(lm_eval.datasets.asdiv.asdiv)
+    DATASET_PATH = inspect.getfile(lm_eval_old.datasets.asdiv.asdiv)
 
     def has_training_docs(self):
         return False

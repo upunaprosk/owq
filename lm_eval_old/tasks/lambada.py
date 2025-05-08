@@ -12,8 +12,8 @@ in the broader discourse.
 
 Homepage: https://zenodo.org/record/2630551#.X4Xzn5NKjUI
 """
-from lm_eval.base import Task, rf
-from lm_eval.metrics import mean, perplexity
+from lm_eval_old.base import Task, rf
+from lm_eval_old.metrics import mean, perplexity
 
 
 _CITATION = """

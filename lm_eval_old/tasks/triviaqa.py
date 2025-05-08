@@ -11,8 +11,8 @@ Homepage: https://nlp.cs.washington.edu/triviaqa/
 """
 import inspect
 import string
-from lm_eval.base import Task, rf
-from lm_eval.metrics import mean
+from lm_eval_old.base import Task, rf
+from lm_eval_old.metrics import mean
 
 _CITATION = """
 @InProceedings{JoshiTriviaQA2017,

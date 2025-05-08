@@ -13,8 +13,8 @@ Homepage: https://allenai.org/data/qasper
 from collections import Counter
 import re
 import string
-from lm_eval.base import rf, Task
-from lm_eval.metrics import f1_score, mean
+from lm_eval_old.base import rf, Task
+from lm_eval_old.metrics import f1_score, mean
 
 
 _CITATION = """

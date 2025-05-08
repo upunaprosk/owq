@@ -16,8 +16,8 @@ and (4) a yes/no/maybe answer which summarizes the conclusion.
 Homepage: https://pubmedqa.github.io/
 """
 import numpy as np
-from lm_eval.base import rf, Task
-from lm_eval.metrics import mean
+from lm_eval_old.base import rf, Task
+from lm_eval_old.metrics import mean
 
 
 _CITATION = """

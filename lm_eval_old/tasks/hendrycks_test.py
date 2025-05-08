@@ -12,7 +12,7 @@ important shortcomings.
 
 Homepage: https://github.com/hendrycks/test
 """
-from lm_eval.base import MultipleChoiceTask
+from lm_eval_old.base import MultipleChoiceTask
 
 _CITATION = """
 @article{hendryckstest2021,

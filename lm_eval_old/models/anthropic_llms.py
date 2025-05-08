@@ -1,5 +1,5 @@
 import os
-from lm_eval.base import BaseLM
+from lm_eval_old.base import BaseLM
 from tqdm import tqdm
 import time
 

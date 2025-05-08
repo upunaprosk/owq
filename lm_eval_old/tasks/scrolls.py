@@ -33,8 +33,8 @@ from abc import abstractmethod
 # from datasets import load_metric
 import evaluate
 from transformers import AutoTokenizer
-from lm_eval.base import rf, Task
-from lm_eval.metrics import mean
+from lm_eval_old.base import rf, Task
+from lm_eval_old.metrics import mean
 from functools import reduce
 import transformers.data.metrics.squad_metrics as squad_metrics
 import numpy as np

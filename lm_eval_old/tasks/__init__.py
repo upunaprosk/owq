@@ -2,7 +2,7 @@ from pprint import pprint
 from typing import List, Union
 
 import sacrebleu
-import lm_eval.base
+import lm_eval_old.base
 
 from . import babi
 from . import superglue
@@ -411,7 +411,7 @@ def get_task_name_from_object(task_object):
     )
 
 
-def get_task_dict(task_name_list: List[Union[str, lm_eval.base.Task]]):
+def get_task_dict(task_name_list: List[Union[str, lm_eval_old.base.Task]]):
     task_name_dict = {
         task_name: get_task(task_name)()
         for task_name in task_name_list

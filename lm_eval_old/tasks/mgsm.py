@@ -24,8 +24,8 @@ We also include few-shot exemplars that are also manually translated from each l
 Homepage: https://github.com/google-research/url-nlp/tree/main/mgsm
 """
 import re
-from lm_eval.base import Task, rf
-from lm_eval.metrics import mean
+from lm_eval_old.base import Task, rf
+from lm_eval_old.metrics import mean
 
 
 _CITATION = """

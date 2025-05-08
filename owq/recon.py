@@ -33,7 +33,85 @@ class GPTQ_OWQ:
         self.out_quantizer = None
         self.ids = None
 
+    def add_batch_x01(self, inp):
+        inp1 = inp.clone()
+        if len(inp1.shape) == 2:
+            inp1 = inp1.unsqueeze(0)  # Perhaps, we don't need this: Convert to 3D tensor [batch_size, seq_len, hidden_dim]
+        batch_size, seq_len, hidden_dim = inp1.shape
+        if batch_size != 2:
+            # print(f'add_batch_x01: {batch_size} != 2')
+            return
+
+        inp1 = inp1.to(device=self.dev)
+        tmp = inp1.shape[0]  # batch size
+        X0 = inp1[0]  # Shape: [seq_len, hidden_dim]
+        X1 = inp1[1]  # Shape: [seq_len, hidden_dim]
+        X0 = X0.t()  # Shape: [hidden_dim, seq_len]
+        X1 = X1.t()  # Shape: [hidden_dim, seq_len]
+
+        if not hasattr(self, "H_x01"):
+            try:
+                self.H_x01 = torch.zeros((self.columns, self.columns), device=self.dev)
+            except torch.OutOfMemoryError:
+                print("Memory: OOM H allocate bypass")
+                torch_empty_cache()
+                self.H_x01 = torch.zeros((self.columns, self.columns), device=self.dev)
+
+        else:
+            self.H_x01 *= self.nsamples / (self.nsamples + tmp)
+
+        samples_Hx01 = (self.nsamples + tmp) / 2
+        # print(f"Input shape after processing: {inp1.shape}")
+        # print(f"Accumulated samples: {self.nsamples}")
+        delta = math.sqrt(2 / samples_Hx01) * (X0 - X1).float()
+        try:
+            self.H_x01 += delta.matmul(delta.t())
+        except torch.OutOfMemoryError:
+            print("Memory: OOM cpu bypass for process batch matmul")
+            torch_empty_cache()
+            device = self.H_x01.device
+            self.H_x01, delta = self.H_x01.to(device=CPU), delta.to(device=CPU)
+            self.H_x01 += delta.matmul(delta.t())
+            self.H_x01 = self.H_x01.to(device=device) # move back
+
+
+    def bias_x01_sorting(self, percdamp=.01, frob_norm=None):
+        if not hasattr(self, "H_x01"):
+            return None
+
+        H = self.H.clone()
+        dead = torch.diag(H) == 0
+        H[dead, dead] = 1
+
+        damp = percdamp * torch.mean(torch.diag(H))
+        diag = torch.arange(self.columns, device=self.dev)
+        H[diag, diag] += damp
+
+        H = torch.linalg.cholesky(H)
+        H = torch.cholesky_inverse(H)
+        H = torch.linalg.cholesky(H, upper=True)
+        Hinv = H # Hinv - upper Cholesky of inverse of H
+
+        # Calculate debiasing changes for W matrix
+        W = self.layer.weight.data.float()
+        Jt = self.H_x01.matmul(W.transpose(0, 1))  # Jt - transposed gradient, its shape is the same as of W^t
+        dW = Hinv.transpose(0, 1).matmul(Hinv.matmul(Jt)).transpose(0, 1) # potential debiasing correction: W = W - dW
+        column_sensitivity = dW.pow(2).sum(dim=0) # L2 squared norm of dW columns
+        if frob_norm is not None:
+            # same option as in hessian_sorting (here it's not used yet)
+            column_sensitivity *= frob_norm
+
+        # Sort with indices
+        sorted_values, sorted_indices = torch.sort(column_sensitivity, descending=False)
+
+        del self.H_x01
+        return torch.stack([sorted_values, sorted_indices], dim=0)
+
+
     def add_batch(self, inp, out):
+        if len(inp.shape) == 3 and inp.shape[0] == 2:
+            self.add_batch_x01(inp)
+
         if len(inp.shape) == 2:
             inp = inp.unsqueeze(0)
         tmp = inp.shape[0]
@@ -57,7 +135,7 @@ class GPTQ_OWQ:
         inp = math.sqrt(2 / self.nsamples) * inp.float()
         self.H += inp.matmul(inp.t())
 
-    def hessian_sorting(self, actorder=False, frob_norm=None, custom=None):
+    def hessian_sorting(self, actorder=False, frob_norm=None, custom=None, add_custom=False):
         if not custom:
             H = self.H
 
@@ -105,6 +183,59 @@ class GPTQ_OWQ:
             self.ids = ids
             # print("Random outliers:", outliers.cpu().tolist())
             return descending_ids[:self.n_out].to(torch.int32)
+        elif custom is not None and add_custom:
+            # same as usual mode (w/o custom) but read custom columns table
+            # and then take n_out columns from two sources: n_out/2 largest columns
+            # from Hessian and n_out/2 from the custom columns
+            H = self.H
+
+            if not self.owq:
+                if actorder:
+                    self.ids = torch.argsort(torch.diag(H), descending=True)
+                return torch.tensor([])
+
+            n_out = self.n_out // 2 # n_out > 0 and even
+
+            temp_mask = torch.full([self.columns], True, device=self.dev)
+
+            H_diag = torch.diag(H)
+            if frob_norm is not None:
+                H_diag *= frob_norm
+            descending_ids = torch.argsort(H_diag, descending=True)
+
+            temp_mask[descending_ids[:n_out]] = False
+            if actorder:
+                ids = torch.cat([descending_ids[n_out:], descending_ids[:n_out]])
+            else:
+                ids = torch.cat([torch.arange(self.columns, device=self.dev)[temp_mask], descending_ids[:n_out]])
+
+            # n_out indices taken by sorted Hessian
+            taken_list = descending_ids[:n_out].cpu().tolist()
+
+            # get n_out from custom column list
+            idx_list_full = []
+            idx_list = []
+            with open(custom, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    _, idx_str, sens_str = line.split()
+                    idx = int(idx_str)
+                    idx_list_full.append(idx)
+                    if idx in taken_list:
+                        continue
+                    idx_list.append(idx)
+            print(f"Hessian n_out={taken_list}, bias n_out={idx_list[-n_out:]}")
+            for x in idx_list_full[-n_out:]:
+                if x in taken_list:
+                    printf(f"Column {x} is in both top lists")
+            taken_list += idx_list[-n_out:] # take last n_out
+
+            # compose ids again
+            ids_cpu = [x for x in ids.cpu().tolist() if x not in taken_list]
+            ids_cpu += taken_list
+
+            self.ids = torch.tensor(ids_cpu, device=self.dev, dtype=torch.int32)
+            return torch.sort(torch.tensor(taken_list, device=self.dev, dtype=torch.int32))[0]
         else:
             idx_list = []
             with open(custom, 'r') as f:
@@ -222,4 +353,6 @@ class GPTQ_OWQ:
         self.H = None
         self.Losses = None
         self.ids = None
+        if hasattr(self, "H_x01"):
+            self.H_x01 = None
         torch.cuda.empty_cache()

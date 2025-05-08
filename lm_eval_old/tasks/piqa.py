@@ -9,7 +9,7 @@ actually learning about the world?
 
 Homepage: https://yonatanbisk.com/piqa/
 """
-from lm_eval.base import MultipleChoiceTask
+from lm_eval_old.base import MultipleChoiceTask
 
 
 _CITATION = """

@@ -1,4 +1,4 @@
-from lm_eval.base import MultipleChoiceTask
+from lm_eval_old.base import MultipleChoiceTask
 
 
 class Haerae(MultipleChoiceTask):

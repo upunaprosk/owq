@@ -13,7 +13,7 @@ in the broader discourse.
 
 Homepage: https://zenodo.org/record/2630551#.X4Xzn5NKjUI
 """
-from lm_eval.tasks.lambada import LambadaOpenAI, LambadaStandard
+from lm_eval_old.tasks.lambada import LambadaOpenAI, LambadaStandard
 
 
 _CITATION = """

@@ -85,6 +85,62 @@ def get_c4(nsamples, seed, seqlen, tokenizer, train):
 
         return valenc
 
+def get_crows_pairs(nsamples, seed, seqlen, tokenizer, train, model=None):
+    if not train:
+        raise ValueError
+
+    print(f"get_crows_pairs: seqlen={seqlen}")
+    random.seed(seed)
+    split = "test" # there is no "train" split in crows_pairs
+    dataset = load_dataset("nyu-mll/crows_pairs", split=split, trust_remote_code=True)
+    if model is not None and 'opt-125m' in model.lower():
+        nsamples = len(dataset) # take all dataset in case of opt-125m
+    sampled_indices = random.sample(range(len(dataset)), nsamples)
+
+    if tokenizer.pad_token is None:
+        # Llama 3.2 1B has no tokenizer.pad_token
+        tokenizer.pad_token = tokenizer.eos_token
+
+    trainloader = []
+    for idx in sampled_indices:
+        x0 = dataset[idx]["sent_more"]
+        x1 = dataset[idx]["sent_less"]
+        enc_x0 = tokenizer(x0, padding='max_length', max_length=seqlen, return_tensors="pt")
+        enc_x1 = tokenizer(x1, padding='max_length', max_length=seqlen, return_tensors="pt")
+        inp = torch.cat((enc_x0.input_ids, enc_x1.input_ids), dim=0)
+        trainloader.append((inp,))
+
+    print(f"get_crows_pairs: nsamples={len(trainloader)}")
+    return trainloader
+
+def get_crows_stories(nsamples, seed, seqlen, tokenizer, train, model=None):
+    if not train:
+        raise ValueError
+
+    print(f"get_crows_stories: seqlen={seqlen}")
+    random.seed(seed)
+    split = "train" # there is no "test" split in crows-pairs-stories
+    dataset = load_dataset("iproskurina/crows-pairs-stories", split=split, trust_remote_code=True)
+    if model is not None and 'opt-125m' in model.lower():
+        nsamples = len(dataset) # take all dataset in case of opt-125m
+    sampled_indices = random.sample(range(len(dataset)), nsamples)
+
+    if tokenizer.pad_token is None:
+        # Llama 3.2 1B has no tokenizer.pad_token
+        tokenizer.pad_token = tokenizer.eos_token
+
+    trainloader = []
+    for idx in sampled_indices:
+        x0 = dataset[idx]["sent_more_story"]
+        x1 = dataset[idx]["story_less"]
+        enc_x0 = tokenizer(x0, padding='max_length', max_length=seqlen, return_tensors="pt")
+        enc_x1 = tokenizer(x1, padding='max_length', max_length=seqlen, return_tensors="pt")
+        inp = torch.cat((enc_x0.input_ids, enc_x1.input_ids), dim=0)
+        trainloader.append((inp,))
+
+    print(f"get_crows_stories: nsamples={len(trainloader)}")
+    return trainloader
+
 def get_loaders(
     name, nsamples=128, seed=0, seqlen=2048, model='', train=True
 ):
@@ -98,6 +154,10 @@ def get_loaders(
         return get_ptb(nsamples, seed, seqlen, tokenizer, train)
     elif 'c4' in name:
         return get_c4(nsamples, seed, seqlen, tokenizer, train)
+    elif 'crows_pairs' in name:
+        return get_crows_pairs(nsamples, seed, seqlen, tokenizer, train, model)
+    elif 'crows_stories' in name:
+        return get_crows_stories(nsamples, seed, seqlen, tokenizer, train, model)
     else: # custom dataset
         print(f"Custom dataset load from {name}")
         datas = torch.load(name)

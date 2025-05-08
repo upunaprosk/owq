@@ -16,10 +16,10 @@ import inspect
 import numpy as np
 import re
 import string
-import lm_eval.datasets.drop.drop
+import lm_eval_old.datasets.drop.drop
 from scipy.optimize import linear_sum_assignment
-from lm_eval.base import Task, rf
-from lm_eval.metrics import mean
+from lm_eval_old.base import Task, rf
+from lm_eval_old.metrics import mean
 
 
 _CITATION = """
@@ -39,7 +39,7 @@ _ARTICLES = re.compile(r"\b(a|an|the)\b", re.UNICODE)
 
 class DROP(Task):
     VERSION = 1
-    DATASET_PATH = inspect.getfile(lm_eval.datasets.drop.drop)
+    DATASET_PATH = inspect.getfile(lm_eval_old.datasets.drop.drop)
     DATASET_NAME = None
 
     def has_training_docs(self):

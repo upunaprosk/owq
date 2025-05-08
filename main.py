@@ -1,5 +1,8 @@
 import time
 
+import os
+import json
+
 import torch
 import torch.nn as nn
 
@@ -29,9 +32,12 @@ def layerwise_quantize(model, dataloader, dev, args):
     layers[0] = layers[0].to(dev)
 
     dtype = next(iter(model.parameters())).dtype
+    batch_size = args.batch_size
+
     inps = torch.zeros(
-        (args.nsamples, args.seqlen, model.config.hidden_size), dtype=dtype, device=dev
+        (args.nsamples * batch_size, args.seqlen, model.config.hidden_size), dtype=dtype, device=dev
     )
+    print(f"layerwise_quantize: inps.shape={inps.shape}, dtype={dtype}, batch_size={args.batch_size} args.target_bit={args.target_bit}")
 
     cache = {kw: None for kw in meta['inp_kwargs']}
     cache['i'] = 0
@@ -42,7 +48,8 @@ def layerwise_quantize(model, dataloader, dev, args):
             self.module = module
 
         def forward(self, inp, **kwargs):
-            inps[cache['i']] = inp
+            idx = cache['i']
+            inps[idx*batch_size:(idx+1)*batch_size] = inp
             for key in cache:
                 if key == 'i':
                     cache['i'] += 1
@@ -56,6 +63,7 @@ def layerwise_quantize(model, dataloader, dev, args):
             model(batch[0].to(dev))
         except ValueError:
             pass
+    del dataloader
 
     layers[0] = layers[0].module.cpu()
 
@@ -63,7 +71,7 @@ def layerwise_quantize(model, dataloader, dev, args):
         pre_layer = pre_layer.cpu()
     torch.cuda.empty_cache()
 
-    outs = torch.zeros_like(inps)
+    # outs = torch.zeros_like(inps)
     del cache['i']
     inp_kwargs = cache
 
@@ -72,6 +80,7 @@ def layerwise_quantize(model, dataloader, dev, args):
     owq_layers = args.meta['owq_layers']
     ratios = args.meta['ratios']
     n_out_dict = {l: 0 for l in owq_layers.keys()}
+    n_out_float_dict = {l: float(0) for l in owq_layers.keys()}
     if args.target_bit is not None:
         n_owq_layers = sum(owq_layers.values())
 
@@ -86,9 +95,26 @@ def layerwise_quantize(model, dataloader, dev, args):
             n_out = round(layer[l].weight.data.shape[1] * r * ratios[l])
             if n_out % 2 == 1: n_out += 1
             n_out_dict[l] = n_out
+            n_out_float = float(layer[l].weight.data.shape[1]) * r * ratios[l]
+            n_out_float_dict[l] = n_out_float
     elif args.target_rank is not None:
         for l in owq_layers:
             n_out_dict[l] = args.target_rank
+
+    if args.custom_columns and not 'random' in args.custom_columns.lower() and not args.add_custom_columns:
+        path_to_json = os.path.join(args.custom_columns, "n_out_dict.json")
+        with open(path_to_json, "r") as f:
+            n_out_dict = json.load(f)
+
+    if args.output_columns or args.output_bias_columns:
+        for p in (args.output_columns, args.output_bias_columns):
+            if p is not None:
+                path_to_json = os.path.join(p, "n_out_dict.json")
+                with open(path_to_json, "w") as f:
+                    json.dump(n_out_dict, f)
+                path_to_json = os.path.join(p, "n_out_float_dict.json")
+                with open(path_to_json, "w") as f:
+                    json.dump(n_out_float_dict, f)
 
     quantizers = {}
     for i in range(len(layers)):
@@ -119,6 +145,10 @@ def layerwise_quantize(model, dataloader, dev, args):
 
             def add_batch(name):
                 def tmp(_, inp, out):
+                    if len(inp[0].data.shape) == 2:
+                        # print(f"Fixing shape={inp[0].data.shape} for gptq_owq[{name}]") #  layer shape {gptq_owq[name].layer.weight.data.shape}
+                        # OPT model merges batch_size and seq_len before fc1 and fc2 modules, restore the input shape
+                        inp[0].data = inp[0].data.reshape(args.batch_size, inp[0].data.shape[0] // args.batch_size, inp[0].data.shape[1])
                     gptq_owq[name].add_batch(inp[0].data, out.data)
 
                 return tmp
@@ -126,7 +156,7 @@ def layerwise_quantize(model, dataloader, dev, args):
             handles = [subset[name].register_forward_hook(add_batch(name)) for name in subset]
 
             for j in range(args.nsamples):
-                input_tensor = inps[j].unsqueeze(0)
+                input_tensor = inps[j*batch_size:(j+1)*batch_size]
                 if use_rope:
                     cos, sin = rotary_emb(input_tensor, position_ids[:, :input_tensor.shape[1]])
                     layer(input_tensor, position_embeddings=(cos, sin), **inp_kwargs)
@@ -150,15 +180,43 @@ def layerwise_quantize(model, dataloader, dev, args):
                 if args.custom_columns:
                     path_to_columns=args.custom_columns
                     if not 'random' in args.custom_columns.lower():
-                      path_to_columns=f"{meta['prefix']}.{i}.{name}.txt"
+                        path_to_columns = os.path.join(path_to_columns, f"{meta['prefix']}.{i}.{name}.txt")
+                    print(f"Reading custom columns from {meta['prefix']}.{i}.{name}.txt")
                     out_ids = gptq_owq[name].hessian_sorting(
-                        actorder=args.act_order, frob_norm=frob_norm_error, custom=path_to_columns
+                        actorder=args.act_order, frob_norm=frob_norm_error, custom=path_to_columns,
+                        add_custom=args.add_custom_columns
                     )
                     gptq_owq[name].quantizer.out_ids = out_ids
                 else:
                     out_ids = gptq_owq[name].hessian_sorting(
                         actorder=args.act_order, frob_norm=frob_norm_error)
                     gptq_owq[name].quantizer.out_ids = out_ids
+
+                if args.output_columns:
+                    path_to_columns = os.path.join(args.output_columns, f"{meta['prefix']}.{i}.{name}.txt")
+                    if gptq_owq[name].n_out > 0:
+                        idx_list = gptq_owq[name].ids.cpu().tolist()
+                        # store in simple ascending order (as custom_columns expects it, see hessian_sorting where it reverses and then put first n_out indices to the end)
+                        idx_list = idx_list[::-1]
+                        idx_list = idx_list[gptq_owq[name].n_out:] + idx_list[:gptq_owq[name].n_out]
+                    else:
+                        if gptq_owq[name].ids is not None:
+                            idx_list = gptq_owq[name].ids.cpu().tolist()[::-1]
+                        else:
+                            idx_list = range(gptq_owq[name].columns)
+                    with open(path_to_columns, "w") as f:
+                        for col_idx in idx_list:
+                            print("-", col_idx, "-", sep="\t", file=f)
+
+                if args.output_bias_columns:
+                    path_to_columns = os.path.join(args.output_bias_columns, f"{meta['prefix']}.{i}.{name}.txt")
+                    bias_data = gptq_owq[name].bias_x01_sorting()
+                    if bias_data is not None:
+                        bias_data = bias_data.cpu()
+                        with open(path_to_columns, "w") as f:
+                            for col_idx in range(bias_data.shape[1]):
+                                print(float(bias_data[0, col_idx]), int(bias_data[1, col_idx]), "-", sep="\t", file=f)
+                    del bias_data
 
             if not args.no_frob_norm:
                 del W, W_quant, temp_quantizer
@@ -176,19 +234,20 @@ def layerwise_quantize(model, dataloader, dev, args):
             quantizers[f"{meta['prefix']}.{i}.{name}"] = quantizers[f"{meta['prefix']}.{i}.{name}"].cpu()
 
         for j in range(args.nsamples):
-            input_tensor = inps[j].unsqueeze(0)
+            input_tensor = inps[j*batch_size:(j+1)*batch_size]
             if use_rope:
                 cos, sin = rotary_emb(input_tensor, position_ids[:, :input_tensor.shape[1]])
                 out = layer(input_tensor, position_embeddings=(cos, sin), **inp_kwargs)
             else:
                 out = layer(input_tensor, **inp_kwargs)
-            outs[j] = out[0]
+            # outs[j] = out[0]
+            inps[j*batch_size:(j+1)*batch_size] = out[0]
 
         layers[i] = layer.cpu()
         del layer
         del gptq_owq
         torch.cuda.empty_cache()
-        inps, outs = outs, inps
+        # inps, outs = outs, inps
 
     model.config.use_cache = use_cache
     return quantizers
@@ -487,6 +546,18 @@ if __name__ == '__main__':
         help='Load custom columns'
     )
     parser.add_argument(
+        '--add_custom_columns', action='store_true',
+        help='Compose top outlier columns from custom and Hessian sorted columns in 1-to-1 proportion'
+    )
+    parser.add_argument(
+        '--output_columns', type=str, default='',
+        help='Save the columns to this folder (OWQ)'
+    )
+    parser.add_argument(
+        '--output_bias_columns', type=str, default='',
+        help='Save the columns to this folder (bias sensitivity)'
+    )
+    parser.add_argument(
         '--logfile', type=str, default='',
         help='Logging file name'
     )
@@ -524,6 +595,8 @@ if __name__ == '__main__':
     args.meta = meta
     device = torch.device('cuda:0')
 
+    args.batch_size = 1
+
     seed_all(args.seed)
 
     t = 0
@@ -539,10 +612,17 @@ if __name__ == '__main__':
     else:
         args.seqlen = 2048
     args.seqlen = min(args.seqlen, 2048)
+    if args.dataset in ("crows_pairs", "crows_stories"):
+        args.seqlen = 1024 # save VRAM in layerwise_quantize
+
     if not args.load and args.wbits < 16 and not args.nearest:
         dataloader = get_loaders(
             args.dataset, nsamples=args.nsamples, seed=args.seed, model=args.model, seqlen=args.seqlen, train=True
         )
+        if args.nsamples < len(dataloader):
+            args.nsamples = len(dataloader) # crows_pairs is loaded fully (we need its all data)
+        if dataloader is not None and dataloader[0][0].shape[0] > 1:
+            args.batch_size = dataloader[0][0].shape[0] # in case of crows_pairs batch_size == 2
         tick = time.time()
         quantizers = layerwise_quantize(model, dataloader, device, args)
         t = round((time.time() - tick), 1)
@@ -570,7 +650,7 @@ if __name__ == '__main__':
     t1 = time.time()
     ppl_scores = []
     if not args.no_eval:
-        ppl_tasks = ['wikitext2', 'ptb'] # skip 'c4' - cannot be loaded for Mistral (seqlen=30k)
+        ppl_tasks = ['wikitext2', 'ptb', 'c4']
         for dataset in ppl_tasks:
             testloader = get_loaders(
                 dataset, seed=args.seed, model=args.model, seqlen=args.seqlen, train=False

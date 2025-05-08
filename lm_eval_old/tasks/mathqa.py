@@ -9,7 +9,7 @@ to word problems in the AQuA dataset (Ling et al., 2017).
 Homepage: https://math-qa.github.io/math-QA/
 """
 import re
-from lm_eval.base import MultipleChoiceTask
+from lm_eval_old.base import MultipleChoiceTask
 
 
 _CITATION = """

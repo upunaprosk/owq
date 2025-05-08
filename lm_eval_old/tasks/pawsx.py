@@ -24,9 +24,9 @@ and may differ from the ones used by mGPT and XGLM (they do not provide their pr
 
 Homepage: https://github.com/google-research-datasets/paws/tree/master/pawsx
 """
-from lm_eval.base import Task, rf
-from lm_eval.metrics import mean
-from lm_eval import utils
+from lm_eval_old.base import Task, rf
+from lm_eval_old.metrics import mean
+from lm_eval_old import utils
 
 _CITATION = """
 @inproceedings{yang-etal-2019-paws,

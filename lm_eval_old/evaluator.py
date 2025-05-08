@@ -2,11 +2,11 @@ import collections
 import itertools
 import random
 
-import lm_eval.metrics
-import lm_eval.models
-import lm_eval.tasks
-import lm_eval.base
-from lm_eval.utils import positional_deprecated, run_task_tests
+import lm_eval_old.metrics
+import lm_eval_old.models
+import lm_eval_old.tasks
+import lm_eval_old.base
+from lm_eval_old.utils import positional_deprecated, run_task_tests
 
 import numpy as np
 import transformers
@@ -33,7 +33,7 @@ def simple_evaluate(
     """Instantiate and evaluate a model on a list of tasks.
 
     :param model: Union[str, LM]
-        Name of model, transformers.PreTrainedModel object, or LM object, see lm_eval.models.get_model
+        Name of model, transformers.PreTrainedModel object, or LM object, see lm_eval_old.models.get_model
     :param model_args: Optional[str]
         String arguments for each model class, see LM.create_from_arg_string.
         Ignored if `model` argument is a LM object.
@@ -72,22 +72,22 @@ def simple_evaluate(
     if isinstance(model, str):
         if model_args is None:
             model_args = ""
-        lm = lm_eval.models.get_model(model).create_from_arg_string(
+        lm = lm_eval_old.models.get_model(model).create_from_arg_string(
             model_args, {"batch_size": batch_size, "max_batch_size": max_batch_size, "device": device}
         )
     elif isinstance(model, transformers.PreTrainedModel):
-        lm = lm_eval.models.get_model("hf-causal")(
+        lm = lm_eval_old.models.get_model("hf-causal")(
                 pretrained=model,
                 batch_size=batch_size,
                 max_batch_size=max_batch_size,
                 )
         no_cache = True
     else:
-        assert isinstance(model, lm_eval.base.LM)
+        assert isinstance(model, lm_eval_old.base.LM)
         lm = model
 
     if not no_cache:
-        lm = lm_eval.base.CachingLM(
+        lm = lm_eval_old.base.CachingLM(
             lm,
             "lm_cache/"
             + (model if isinstance(model, str) else model.model.config._name_or_path)
@@ -96,7 +96,7 @@ def simple_evaluate(
             + ".db",
         )
 
-    task_dict = lm_eval.tasks.get_task_dict(tasks)
+    task_dict = lm_eval_old.tasks.get_task_dict(tasks)
 
     if check_integrity:
         run_task_tests(task_list=tasks)
@@ -283,7 +283,7 @@ def evaluate(
 
     # Compare all tasks/sets at once to ensure a single training set scan
     if decontaminate:
-        from lm_eval.decontamination.decontaminate import get_train_overlap
+        from lm_eval_old.decontamination.decontaminate import get_train_overlap
 
         print("Finding train/test overlap, please wait...")
         overlaps = get_train_overlap(
@@ -312,9 +312,9 @@ def evaluate(
             if write_out:
                 write_out_info[task_name][doc_id][f"logit_{i}"] = resp
                 task = task_dict[task_name]
-                if isinstance(task, lm_eval.base.MultipleChoiceTask):
+                if isinstance(task, lm_eval_old.base.MultipleChoiceTask):
                     write_out_info[task_name][doc_id]["truth"] = doc["gold"]
-                elif isinstance(task, lm_eval.tasks.winogrande.Winogrande):
+                elif isinstance(task, lm_eval_old.tasks.winogrande.Winogrande):
                     write_out_info[task_name][doc_id]["truth"] = task.answer_to_num[
                         doc["answer"]
                     ]
@@ -356,7 +356,7 @@ def evaluate(
         # hotfix: bleu, chrf, ter seem to be really expensive to bootstrap
         # so we run them less iterations. still looking for a cleaner way to do this
 
-        stderr = lm_eval.metrics.stderr_for_metric(
+        stderr = lm_eval_old.metrics.stderr_for_metric(
             metric=task.aggregation()[real_metric],
             bootstrap_iters=min(bootstrap_iters, 1000)
             if metric in ["bleu", "chrf", "ter"]
