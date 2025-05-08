@@ -227,7 +227,7 @@ class GPTQ_OWQ:
             print(f"Hessian n_out={taken_list}, bias n_out={idx_list[-n_out:]}")
             for x in idx_list_full[-n_out:]:
                 if x in taken_list:
-                    printf(f"Column {x} is in both top lists")
+                    print(f"Column {x} is in both top lists")
             taken_list += idx_list[-n_out:] # take last n_out
 
             # compose ids again
