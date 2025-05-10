@@ -226,16 +226,31 @@ def layerwise_quantize(model, dataloader, dev, args):
 
             for name in subset:
                 print(f"Quantizing {meta['prefix']}.{i}.{name}")
+                if args.input_Hx01:
+                    path_Hx01 = os.path.join(args.input_Hx01, f"{meta['prefix']}.{i}.{name}.pt")
+                    # load H_x01
+                    print(f"Loading H_x01 matrix from {path_Hx01}")
+                    gptq_owq[name].H_x01 = torch.load(path_Hx01, map_location=dev, weights_only=True)
+
                 bias_data = gptq_owq[name].fasterquant(
                     percdamp=args.percdamp, groupsize=args.groupsize, actorder=args.act_order, debias_scale=args.debias_scale
                 )
                 quantizers[f"{meta['prefix']}.{i}.{name}"] = gptq_owq[name].quantizer
-                path_to_corr = os.path.join(args.output_bias_columns, f"{meta['prefix']}.{i}.{name}.tsv")
-                if args.debias_scale is not None and bias_data is not None:
-                    bias_data = bias_data.cpu()
-                    with open(path_to_corr, "w") as f:
-                        for col_idx in range(bias_data.shape[1]):
-                            print(float(bias_data[0, col_idx]), int(bias_data[1, col_idx]), int(bias_data[2, col_idx]), float(bias_data[3, col_idx]), float(bias_data[4, col_idx]), sep="\t", file=f)
+
+                if args.output_bias_columns is not None:
+                    # save H_x01
+                    if hasattr(gptq_owq[name], "H_x01"):
+                        path_Hx01 = os.path.join(args.output_bias_columns, f"{meta['prefix']}.{i}.{name}.pt")
+                        with open(path_Hx01, "wb") as f:
+                            torch.save(gptq_owq[name].H_x01, f)
+                    # save debias statistics
+                    if args.debias_scale and bias_data is not None:
+                        path_to_columns = os.path.join(args.output_bias_columns, f"{meta['prefix']}.{i}.{name}.tsv")
+                        bias_data = bias_data.cpu()
+                        with open(path_to_columns, "w") as f:
+                            for col_idx in range(bias_data.shape[1]):
+                                print(float(bias_data[0, col_idx]), int(bias_data[1, col_idx]), int(bias_data[2, col_idx]), float(bias_data[3, col_idx]), float(bias_data[4, col_idx]), sep="\t", file=f)
+
                 gptq_owq[name].free()
 
         for name in list(block_layers.keys()):
@@ -568,6 +583,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--output_bias_columns', type=str, default='',
         help='Save the columns to this folder (bias sensitivity)'
+    )
+    parser.add_argument(
+        '--input_Hx01', type=str, default='',
+        help='Read H_x01 matrices from this folder (is needed for debias when quantized on another data set)'
     )
     parser.add_argument(
         '--logfile', type=str, default='',
