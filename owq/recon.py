@@ -70,12 +70,13 @@ class GPTQ_OWQ:
             print("Memory: OOM cpu bypass for process batch matmul")
             torch_empty_cache()
             device = self.H_x01.device
+            CPU = torch.device("cpu")
             self.H_x01, delta = self.H_x01.to(device=CPU), delta.to(device=CPU)
             self.H_x01 += delta.matmul(delta.t())
             self.H_x01 = self.H_x01.to(device=device) # move back
 
 
-    def bias_x01_sorting(self, percdamp=.01, frob_norm=None):
+    def bias_x01_sorting(self, percdamp=.01, frob_norm=None, dW_quant=None):
         if not hasattr(self, "H_x01"):
             return None
 
@@ -97,15 +98,33 @@ class GPTQ_OWQ:
         Jt = self.H_x01.matmul(W.transpose(0, 1))  # Jt - transposed gradient, its shape is the same as of W^t
         dW = Hinv.transpose(0, 1).matmul(Hinv.matmul(Jt)).transpose(0, 1) # potential debiasing correction: W = W - dW
         column_sensitivity = dW.pow(2).sum(dim=0) # L2 squared norm of dW columns
+        hessian_diag_x01 = torch.diag(self.H_x01)
         if frob_norm is not None:
-            # same option as in hessian_sorting (here it's not used yet)
-            column_sensitivity *= frob_norm
+            hessian_diag_x01 *= frob_norm
+
+        # agreement between dW and dW_quant
+        if dW_quant is not None:
+            dW2 = dW * dW_quant
+            dW_product = dW2.sum(dim=0)
+            dW_product2 = dW2.abs().sum(dim=0)
+        else:
+            dW_product = torch.zeros_like(column_sensitivity)
+            dW_product2 = torch.zeros_like(column_sensitivity)
+
+        # H_diag as in hessian_sorting
+        hessian_diag = torch.diag(self.H)
+        if frob_norm is not None:
+            hessian_diag *= frob_norm
 
         # Sort with indices
         sorted_values, sorted_indices = torch.sort(column_sensitivity, descending=False)
+        hessian_diag_x01 = hessian_diag_x01[sorted_indices]
+        hessian_diag = hessian_diag[sorted_indices]
+        dW_product = dW_product[sorted_indices]
+        dW_product2 = dW_product2[sorted_indices]
 
-        del self.H_x01
-        return torch.stack([sorted_values, sorted_indices], dim=0)
+        # del self.H_x01
+        return torch.stack([sorted_values, sorted_indices, hessian_diag_x01, hessian_diag, dW_product, dW_product2], dim=0)
 
 
     def add_batch(self, inp, out):
@@ -218,7 +237,7 @@ class GPTQ_OWQ:
             with open(custom, 'r') as f:
                 for line in f:
                     line = line.strip()
-                    _, idx_str, sens_str = line.split()
+                    _, idx_str, sens_str = line.split()[:3]
                     idx = int(idx_str)
                     idx_list_full.append(idx)
                     if idx in taken_list:
@@ -268,7 +287,7 @@ class GPTQ_OWQ:
             return torch.sort(descending_ids[:self.n_out])[0].to(torch.int32)
 
     def fasterquant(
-            self, blocksize=128, percdamp=.01, groupsize=-1, actorder=False
+            self, blocksize=128, percdamp=.01, groupsize=-1, actorder=False, debias_scale=0,
     ):
         W = self.layer.weight.data.clone()
         if isinstance(self.layer, nn.Conv2d):
@@ -303,6 +322,18 @@ class GPTQ_OWQ:
         H = torch.linalg.cholesky(H, upper=True)
         Hinv = H
 
+        if hasattr(self, "H_x01"):
+            Jt = self.H_x01.matmul(W.transpose(0, 1))  # Jt - transposed gradient, its shape is the same as of W^t
+            dW = Hinv.transpose(0, 1).matmul(Hinv.matmul(Jt)).transpose(0, 1) # potential debiasing correction: W = W - dW
+
+        CPU = torch.device("cpu")
+        dw_abs_sum = torch.zeros((self.columns, ), device=CPU)
+        dw_counts_minus = torch.zeros((self.columns, ), device=CPU)
+        dw_counts_plus = torch.zeros((self.columns, ), device=CPU)
+        dw_min = torch.zeros((self.columns, ), device=CPU)
+        dw_max = torch.zeros((self.columns, ), device=CPU)
+
+
         for i1 in range(0, self.n_nonout, blocksize):
             i2 = min(i1 + blocksize, self.n_nonout)
             count = i2 - i1
@@ -323,6 +354,29 @@ class GPTQ_OWQ:
                             W[:, (i1 + i):min((i1 + i + groupsize), (self.columns - self.n_out))], weight=True, num=40)
 
                 q = self.quantizer.quantize(w.unsqueeze(1)).flatten()
+
+                # limited debias correction
+                if debias_scale is not None and hasattr(self, "H_x01"):
+                    dw = dW[:, (i1 + i)]
+                    dq = q - w
+                    dw_a = dw.abs()
+                    dq_a = dq.abs()
+                    dw_s = dw.sign()
+                    mask = (dw_a >= dq_a) # make only corrections that are large enough
+                    dc = torch.minimum(dw_a, debias_scale * dq_a) # correction is capped by abs(debias_scale * dq)
+                    # Note: What if abs(q[j]-w[j]) is small? How to get the step of quantization used in q[j]?
+                    if mask.sum() > 0:
+                        corr = dw_s[mask] * dc[mask]
+                        w[mask] += corr # make correction in the "right" direction
+                        # collect some statistics
+                        q = self.quantizer.quantize(w.unsqueeze(1)).flatten()
+                        dw_abs_sum[i1 + i] = float(dc[mask].sum())
+                        se = (dq.sign() * dw_s).to(torch.int32) # agreement in direction
+                        dw_counts_minus[i1 + i] = float((se[mask] < 0).sum())
+                        dw_counts_plus[i1 + i] = float((se[mask] > 0).sum())
+                        dw_min[i1 + i] = float(corr.min())
+                        dw_max[i1 + i] = float(corr.max())
+
                 Q1[:, i] = q
                 Losses1[:, i] = (w - q) ** 2 / d ** 2
 
@@ -348,6 +402,8 @@ class GPTQ_OWQ:
             Q = Q.t()
 
         self.layer.weight.data = Q.reshape(self.layer.weight.shape).to(self.layer.weight.data.dtype)
+
+        return torch.stack([dw_abs_sum, dw_counts_minus, dw_counts_plus, dw_min, dw_max], dim=0)
 
     def free(self):
         self.H = None

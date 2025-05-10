@@ -174,9 +174,11 @@ def layerwise_quantize(model, dataloader, dev, args):
                     )
                     temp_quantizer.find_params(W, weight=True, num=40)
                     W_quant = temp_quantizer.quantize(W)
-                    frob_norm_error = (W - W_quant).pow(2).sum(dim=0)
+                    dW_quant = W - W_quant
+                    frob_norm_error = dW_quant.pow(2).sum(dim=0)
                 else:
                     frob_norm_error = None
+                    dW_quant = None
                 if args.custom_columns:
                     path_to_columns=args.custom_columns
                     if not 'random' in args.custom_columns.lower():
@@ -210,12 +212,12 @@ def layerwise_quantize(model, dataloader, dev, args):
 
                 if args.output_bias_columns:
                     path_to_columns = os.path.join(args.output_bias_columns, f"{meta['prefix']}.{i}.{name}.txt")
-                    bias_data = gptq_owq[name].bias_x01_sorting()
+                    bias_data = gptq_owq[name].bias_x01_sorting(frob_norm=frob_norm_error, dW_quant=dW_quant)
                     if bias_data is not None:
                         bias_data = bias_data.cpu()
                         with open(path_to_columns, "w") as f:
                             for col_idx in range(bias_data.shape[1]):
-                                print(float(bias_data[0, col_idx]), int(bias_data[1, col_idx]), "-", sep="\t", file=f)
+                                print(float(bias_data[0, col_idx]), int(bias_data[1, col_idx]), float(bias_data[2, col_idx]), float(bias_data[3, col_idx]), float(bias_data[4, col_idx]), float(bias_data[5, col_idx]), sep="\t", file=f)
                     del bias_data
 
             if not args.no_frob_norm:
@@ -224,10 +226,16 @@ def layerwise_quantize(model, dataloader, dev, args):
 
             for name in subset:
                 print(f"Quantizing {meta['prefix']}.{i}.{name}")
-                gptq_owq[name].fasterquant(
-                    percdamp=args.percdamp, groupsize=args.groupsize, actorder=args.act_order
+                bias_data = gptq_owq[name].fasterquant(
+                    percdamp=args.percdamp, groupsize=args.groupsize, actorder=args.act_order, debias_scale=args.debias_scale
                 )
                 quantizers[f"{meta['prefix']}.{i}.{name}"] = gptq_owq[name].quantizer
+                path_to_corr = os.path.join(args.output_bias_columns, f"{meta['prefix']}.{i}.{name}.tsv")
+                if args.debias_scale is not None and bias_data is not None:
+                    bias_data = bias_data.cpu()
+                    with open(path_to_corr, "w") as f:
+                        for col_idx in range(bias_data.shape[1]):
+                            print(float(bias_data[0, col_idx]), int(bias_data[1, col_idx]), int(bias_data[2, col_idx]), float(bias_data[3, col_idx]), float(bias_data[4, col_idx]), sep="\t", file=f)
                 gptq_owq[name].free()
 
         for name in list(block_layers.keys()):
@@ -487,6 +495,10 @@ if __name__ == '__main__':
     parser.add_argument(
         '--target_bit', type=float, default=None,
         help='Effctive target bits for OWQ.'
+    )
+    parser.add_argument(
+        '--debias_scale', type=float, default=None,
+        help='Scale factor for debias correction'
     )
     parser.add_argument(
         '--target_rank', type=int, default=None,
