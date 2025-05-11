@@ -105,6 +105,9 @@ def get_crows_pairs(nsamples, seed, seqlen, tokenizer, train, model=None):
     for idx in sampled_indices:
         x0 = dataset[idx]["sent_more"]
         x1 = dataset[idx]["sent_less"]
+        repeats = 8
+        x0 = " ".join([x0] * repeats)
+        x1 = " ".join([x1] * repeats)
         enc_x0 = tokenizer(x0, padding='max_length', max_length=seqlen, return_tensors="pt")
         enc_x1 = tokenizer(x1, padding='max_length', max_length=seqlen, return_tensors="pt")
         inp = torch.cat((enc_x0.input_ids, enc_x1.input_ids), dim=0)
@@ -133,6 +136,9 @@ def get_crows_stories(nsamples, seed, seqlen, tokenizer, train, model=None):
     for idx in sampled_indices:
         x0 = dataset[idx]["sent_more_story"]
         x1 = dataset[idx]["story_less"]
+        repeats = 8
+        x0 = " ".join([x0] * repeats)
+        x1 = " ".join([x1] * repeats)
         enc_x0 = tokenizer(x0, padding='max_length', max_length=seqlen, return_tensors="pt")
         enc_x1 = tokenizer(x1, padding='max_length', max_length=seqlen, return_tensors="pt")
         inp = torch.cat((enc_x0.input_ids, enc_x1.input_ids), dim=0)

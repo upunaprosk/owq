@@ -210,9 +210,10 @@ def layerwise_quantize(model, dataloader, dev, args):
                         for col_idx in idx_list:
                             print("-", col_idx, "-", sep="\t", file=f)
 
-                if args.output_bias_columns:
+                if args.output_bias_columns and not args.dont_output_columns:
                     path_to_columns = os.path.join(args.output_bias_columns, f"{meta['prefix']}.{i}.{name}.txt")
-                    bias_data = gptq_owq[name].bias_x01_sorting(frob_norm=frob_norm_error, dW_quant=dW_quant)
+                    path_dW = os.path.join(args.output_bias_columns, f"{meta['prefix']}.{i}.{name}.dW.pt")
+                    bias_data = gptq_owq[name].bias_x01_sorting(frob_norm=frob_norm_error, dW_quant=dW_quant, save_dW=path_dW)
                     if bias_data is not None:
                         bias_data = bias_data.cpu()
                         with open(path_to_columns, "w") as f:
@@ -231,9 +232,18 @@ def layerwise_quantize(model, dataloader, dev, args):
                     # load H_x01
                     print(f"Loading H_x01 matrix from {path_Hx01}")
                     gptq_owq[name].H_x01 = torch.load(path_Hx01, map_location=dev, weights_only=True)
+                if args.input_dW:
+                    path_dW = os.path.join(args.input_dW, f"{meta['prefix']}.{i}.{name}.dW.pt")
+                    # load dW
+                    print(f"Loading dW matrix from {path_dW}")
+                    gptq_owq[name].dW = torch.load(path_dW, map_location=dev, weights_only=True)
+                if args.debias_gamma is not None and args.debias_gamma > 0:
+                    print(f"Debias correction is propagated, debias_gamma={args.debias_gamma} > 0")
 
                 bias_data = gptq_owq[name].fasterquant(
-                    percdamp=args.percdamp, groupsize=args.groupsize, actorder=args.act_order, debias_scale=args.debias_scale
+                    percdamp=args.percdamp, groupsize=args.groupsize, actorder=args.act_order,
+                    debias_scale=args.debias_scale, debias_ratio=args.debias_ratio,
+                    debias_gamma=args.debias_gamma
                 )
                 quantizers[f"{meta['prefix']}.{i}.{name}"] = gptq_owq[name].quantizer
 
@@ -249,7 +259,7 @@ def layerwise_quantize(model, dataloader, dev, args):
                         bias_data = bias_data.cpu()
                         with open(path_to_columns, "w") as f:
                             for col_idx in range(bias_data.shape[1]):
-                                print(float(bias_data[0, col_idx]), int(bias_data[1, col_idx]), int(bias_data[2, col_idx]), float(bias_data[3, col_idx]), float(bias_data[4, col_idx]), sep="\t", file=f)
+                                print(float(bias_data[0, col_idx]), int(bias_data[1, col_idx]), int(bias_data[2, col_idx]), float(bias_data[3, col_idx]), float(bias_data[4, col_idx]), float(bias_data[5, col_idx]), float(bias_data[6, col_idx]), sep="\t", file=f)
 
                 gptq_owq[name].free()
 
@@ -516,6 +526,14 @@ if __name__ == '__main__':
         help='Scale factor for debias correction'
     )
     parser.add_argument(
+        '--debias_ratio', type=float, default=None,
+        help='Debias is applied to only this ratio of columns that show the largest dW'
+    )
+    parser.add_argument(
+        '--debias_gamma', type=float, default=0,
+        help='Value in [0; 1] range. It tunes the share of debias correction in error compensation of GPTQ algorithm (default: 0)'
+    )
+    parser.add_argument(
         '--target_rank', type=int, default=None,
         help='Number of outlier channels for OWQ.(if --target_bit is not given)'
     )
@@ -587,6 +605,14 @@ if __name__ == '__main__':
     parser.add_argument(
         '--input_Hx01', type=str, default='',
         help='Read H_x01 matrices from this folder (is needed for debias when quantized on another data set)'
+    )
+    parser.add_argument(
+        '--input_dW', type=str, default='',
+        help='Read dW matrices from this folder (is needed for debias when quantized on another data set)'
+    )
+    parser.add_argument(
+        '--dont_output_columns', action='store_true',
+        help='Skip column output (save time, no H_x01 inversion is needed, --output_bias_columns folder is then used for dW/H_x01 output only)'
     )
     parser.add_argument(
         '--logfile', type=str, default='',
