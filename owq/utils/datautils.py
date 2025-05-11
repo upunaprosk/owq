@@ -139,8 +139,8 @@ def get_crows_stories(nsamples, seed, seqlen, tokenizer, train, model=None):
         repeats = 8
         x0 = " ".join([x0] * repeats)
         x1 = " ".join([x1] * repeats)
-        enc_x0 = tokenizer(x0, padding='max_length', max_length=seqlen, return_tensors="pt")
-        enc_x1 = tokenizer(x1, padding='max_length', max_length=seqlen, return_tensors="pt")
+        enc_x0 = tokenizer(x0, padding='max_length', max_length=seqlen, return_tensors="pt",truncation=True)
+        enc_x1 = tokenizer(x1, padding='max_length', max_length=seqlen, return_tensors="pt",truncation=True)
         inp = torch.cat((enc_x0.input_ids, enc_x1.input_ids), dim=0)
         trainloader.append((inp,))
 
