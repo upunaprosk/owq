@@ -291,7 +291,7 @@ class GPTQ_OWQ:
             return torch.sort(descending_ids[:self.n_out])[0].to(torch.int32)
 
     def fasterquant(
-            self, blocksize=128, percdamp=.01, groupsize=-1, actorder=False, debias_scale=0, debias_ratio=None, debias_gamma=0
+            self, blocksize=128, percdamp=.01, groupsize=-1, actorder=False, debias_scale=0, debias_ratio=None
     ):
         W = self.layer.weight.data.clone()
         if isinstance(self.layer, nn.Conv2d):
@@ -370,8 +370,6 @@ class GPTQ_OWQ:
                             W[:, (i1 + i):min((i1 + i + groupsize), (self.columns - self.n_out))], weight=True, num=40)
 
                 q = self.quantizer.quantize(w.unsqueeze(1)).flatten()
-                w0 = w.clone()
-                q0 = q.clone()
 
                 # limited debias correction
                 if debias_scale is not None and dW is not None:
@@ -387,10 +385,9 @@ class GPTQ_OWQ:
                         if mask.sum() > 0:
                             corr = dw_s[mask] * dc[mask]
                             w[mask] += corr # make correction in the "right" direction
-                            # collect some statistics
+                            # quantize again
                             q = self.quantizer.quantize(w.unsqueeze(1)).flatten()
-                            if debias_gamma > 0:
-                                q0 = debias_gamma * q + (1 - debias_gamma) * q0
+                            # collect some statistics
                             dw_abs_sum[i1 + i] = float(dc[mask].sum())
                             se = (dq.sign() * dw_s).to(torch.int32) # agreement in direction
                             dw_counts_minus[i1 + i] = float((se[mask] < 0).sum())
@@ -403,7 +400,7 @@ class GPTQ_OWQ:
                 Q1[:, i] = q
                 Losses1[:, i] = (w - q) ** 2 / d ** 2
 
-                err1 = (w0 - q0) / d
+                err1 = (w - q) / d
                 W1[:, i:] -= err1.unsqueeze(1).matmul(Hinv1[i, i:].unsqueeze(0))
                 Err1[:, i] = err1
 

@@ -237,13 +237,10 @@ def layerwise_quantize(model, dataloader, dev, args):
                     # load dW
                     print(f"Loading dW matrix from {path_dW}")
                     gptq_owq[name].dW = torch.load(path_dW, map_location=dev, weights_only=True)
-                if args.debias_gamma is not None and args.debias_gamma > 0:
-                    print(f"Debias correction is propagated, debias_gamma={args.debias_gamma} > 0")
 
                 bias_data = gptq_owq[name].fasterquant(
                     percdamp=args.percdamp, groupsize=args.groupsize, actorder=args.act_order,
-                    debias_scale=args.debias_scale, debias_ratio=args.debias_ratio,
-                    debias_gamma=args.debias_gamma
+                    debias_scale=args.debias_scale, debias_ratio=args.debias_ratio
                 )
                 quantizers[f"{meta['prefix']}.{i}.{name}"] = gptq_owq[name].quantizer
 
@@ -528,10 +525,6 @@ if __name__ == '__main__':
     parser.add_argument(
         '--debias_ratio', type=float, default=None,
         help='Debias is applied to only this ratio of columns that show the largest dW'
-    )
-    parser.add_argument(
-        '--debias_gamma', type=float, default=0,
-        help='Value in [0; 1] range. It tunes the share of debias correction in error compensation of GPTQ algorithm (default: 0)'
     )
     parser.add_argument(
         '--target_rank', type=int, default=None,
